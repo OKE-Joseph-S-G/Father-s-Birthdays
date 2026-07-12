@@ -28,10 +28,10 @@ export default function FatherPage() {
   return (
     <main className="relative">
       <Analytics site={theme.id} />
-      <SplashScreen />
+      <SplashScreen accent={theme.accent} />
       <AnimatedGradient accent={theme.accent} accentRgb={theme.accentRgb} />
       <ScrollProgress />
-      <MusicPlayer />
+      <MusicPlayer name={theme.shortName} />
       <CursorTrail />
       <FloatingParticles />
       <FireworksCanvas />

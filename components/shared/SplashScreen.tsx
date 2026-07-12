@@ -3,7 +3,11 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState, useEffect } from 'react'
 
-export default function SplashScreen() {
+interface SplashScreenProps {
+  accent?: string
+}
+
+export default function SplashScreen({ accent = '#d4af37' }: SplashScreenProps) {
   const [show, setShow] = useState(true)
   const [phase, setPhase] = useState<'loading' | 'revealing' | 'done'>('loading')
 
@@ -33,7 +37,7 @@ export default function SplashScreen() {
             animate={{ scale: 2.5, opacity: 0.15 }}
             transition={{ duration: 2, ease: 'easeOut' }}
             className="absolute w-64 h-64 rounded-full"
-            style={{ background: 'radial-gradient(circle, #d4af37 0%, transparent 70%)' }}
+            style={{ background: `radial-gradient(circle, ${accent} 0%, transparent 70%)` }}
           />
 
           {/* Spinning ring */}
@@ -47,8 +51,8 @@ export default function SplashScreen() {
               className="w-full h-full rounded-full"
               style={{
                 border: '2px solid transparent',
-                borderTopColor: '#d4af37',
-                borderRightColor: 'rgba(212, 175, 55, 0.3)',
+                borderTopColor: accent,
+                borderRightColor: `${accent}4d`,
               }}
             />
           </motion.div>
@@ -64,8 +68,8 @@ export default function SplashScreen() {
               className="w-full h-full rounded-full"
               style={{
                 border: '1.5px solid transparent',
-                borderBottomColor: '#f0d060',
-                borderLeftColor: 'rgba(240, 208, 96, 0.3)',
+                borderBottomColor: accent,
+                borderLeftColor: `${accent}4d`,
               }}
             />
           </motion.div>
@@ -92,7 +96,7 @@ export default function SplashScreen() {
                 animate={{ x: '0%' }}
                 transition={{ duration: 1.8, ease: 'easeInOut' }}
                 className="h-full rounded-full"
-                style={{ background: 'linear-gradient(90deg, #8a6d00, #d4af37, #f0d060)' }}
+                style={{ background: `linear-gradient(90deg, ${accent}99, ${accent}, ${accent}cc)` }}
               />
             </div>
 

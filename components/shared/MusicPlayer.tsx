@@ -12,7 +12,11 @@ declare global {
 
 const VIDEO_ID = 'dNEnzdcnWzE'
 
-export default function MusicPlayer() {
+interface MusicPlayerProps {
+  name?: string
+}
+
+export default function MusicPlayer({ name = 'Papa' }: MusicPlayerProps) {
   const [showOverlay, setShowOverlay] = useState(true)
   const [isPlaying, setIsPlaying] = useState(false)
   const [playerReady, setPlayerReady] = useState(false)
@@ -151,7 +155,7 @@ export default function MusicPlayer() {
                 transition={{ delay: 0.5, duration: 0.6 }}
                 className="text-white/40 font-body text-lg mb-10"
               >
-                Papa — 2026
+                {name} — 2026
               </motion.p>
 
               <motion.button
