@@ -91,7 +91,7 @@ export const themes: Record<string, Theme> = {
   irene: {
     id: 'irene',
     name: 'Irène',
-    shortName: 'Ma Sœur Irène',
+    shortName: 'Aunt IRENE',
     birthYear: 1992,
     birthMonth: 6,
     birthDay: 21,
