@@ -9,6 +9,5 @@ CREATE TABLE IF NOT EXISTS visits (
   type TEXT DEFAULT 'visit'
 );
 
-CREATE INDEX IF NOT EXISTS idx_visits_timestamp ON visits(timestamp);
-CREATE INDEX IF NOT EXISTS idx_visits_visitor_id ON visits(visitor_id);
-CREATE INDEX IF NOT EXISTS idx_visits_type ON visits(type);
+CREATE POLICY "public_insert" ON visits FOR INSERT WITH CHECK (true);
+CREATE POLICY "public_select" ON visits FOR SELECT USING (true);
