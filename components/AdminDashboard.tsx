@@ -1,0 +1,204 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+
+interface Stats {
+  totalVisits: number
+  uniqueVisitors: number
+  totalViews: number
+  totalTimeSpent: number
+  avgTimePerVisit: number
+  shares: number
+  lastVisit: string
+  dailyVisits: Record<string, number>
+  pageViews: Record<string, number>
+  recentVisits: Array<{
+    id: string
+    timestamp: string
+    duration: number
+    pages: string[]
+  }>
+}
+
+function formatDuration(seconds: number): string {
+  if (seconds < 60) return `${seconds}s`
+  const mins = Math.floor(seconds / 60)
+  const secs = seconds % 60
+  if (mins < 60) return `${mins}m ${secs}s`
+  const hours = Math.floor(mins / 60)
+  const remainMins = mins % 60
+  return `${hours}h ${remainMins}m`
+}
+
+function formatDate(iso: string): string {
+  if (!iso) return 'Jamais'
+  const d = new Date(iso)
+  return d.toLocaleDateString('fr-FR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+export default function AdminDashboard({ password }: { password: string }) {
+  const [stats, setStats] = useState<Stats | null>(null)
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchStats() {
+      try {
+        const res = await fetch('/api/stats', {
+          headers: { Authorization: `Bearer ${password}` },
+        })
+        if (!res.ok) {
+          setError('Mot de passe incorrect ou erreur serveur')
+          setLoading(false)
+          return
+        }
+        const data = await res.json()
+        setStats(data)
+      } catch {
+        setError('Erreur de connexion')
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchStats()
+  }, [password])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
+        <div className="w-8 h-8 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
+        <p className="text-red-400 text-lg">{error}</p>
+      </div>
+    )
+  }
+
+  if (!stats) return null
+
+  const maxDaily = Math.max(...Object.values(stats.dailyVisits), 1)
+  const sortedDays = Object.entries(stats.dailyVisits).sort(([a], [b]) => a.localeCompare(b))
+
+  return (
+    <div className="min-h-screen bg-[#0a0a0a] text-white p-4 md:p-8">
+      <div className="max-w-6xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold" style={{ fontFamily: 'Playfair Display' }}>
+            <span className="bg-gradient-to-r from-[#d4af37] to-[#f4e276] bg-clip-text text-transparent">
+              Dashboard Admin
+            </span>
+          </h1>
+          <p className="text-gray-400 mt-2">Statistiques du site d&apos;anniversaire de Papa</p>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+          <StatCard label="Visites" value={stats.totalVisits} icon="👁️" />
+          <StatCard label="Visiteurs" value={stats.uniqueVisitors} icon="👤" />
+          <StatCard label="Vues" value={stats.totalViews} icon="📄" />
+          <StatCard label="Temps total" value={formatDuration(stats.totalTimeSpent)} icon="⏱️" isText />
+          <StatCard label="Temps moyen" value={formatDuration(stats.avgTimePerVisit)} icon="📊" isText />
+          <StatCard label="Partages" value={stats.shares} icon="🔗" />
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+            <h2 className="text-xl font-semibold text-[#d4af37] mb-4">Visites (7 derniers jours)</h2>
+            <div className="flex items-end gap-2 h-48">
+              {sortedDays.map(([day, count]) => (
+                <div key={day} className="flex-1 flex flex-col items-center gap-1">
+                  <span className="text-xs text-gray-400">{count}</span>
+                  <div
+                    className="w-full bg-gradient-to-t from-[#d4af37] to-[#f4e276] rounded-t-md transition-all"
+                    style={{ height: `${(count / maxDaily) * 100}%`, minHeight: count > 0 ? '4px' : '0' }}
+                  />
+                  <span className="text-[10px] text-gray-500">{day.slice(5)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+            <h2 className="text-xl font-semibold text-[#d4af37] mb-4">Pages vues</h2>
+            <div className="space-y-3">
+              {Object.entries(stats.pageViews)
+                .sort(([, a], [, b]) => b - a)
+                .map(([page, count]) => (
+                  <div key={page} className="flex items-center gap-3">
+                    <span className="text-sm text-gray-300 w-32 truncate">{page || '/'}</span>
+                    <div className="flex-1 h-3 bg-white/10 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-[#d4af37] to-[#f4e276] rounded-full"
+                        style={{ width: `${(count / Math.max(...Object.values(stats.pageViews))) * 100}%` }}
+                      />
+                    </div>
+                    <span className="text-sm text-gray-400 w-8 text-right">{count}</span>
+                  </div>
+                ))}
+              {Object.keys(stats.pageViews).length === 0 && (
+                <p className="text-gray-500 text-sm">Aucune donnée pour le moment</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+          <h2 className="text-xl font-semibold text-[#d4af37] mb-4">Visites récentes</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-gray-400 border-b border-white/10">
+                  <th className="text-left py-2">Date</th>
+                  <th className="text-left py-2">Durée</th>
+                  <th className="text-left py-2">Pages visitées</th>
+                  <th className="text-left py-2">Visiteur</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stats.recentVisits.map((visit, i) => (
+                  <tr key={i} className="border-b border-white/5 hover:bg-white/5">
+                    <td className="py-2 text-gray-300">{formatDate(visit.timestamp)}</td>
+                    <td className="py-2 text-gray-300">{formatDuration(visit.duration)}</td>
+                    <td className="py-2 text-gray-400">{visit.pages.join(' → ')}</td>
+                    <td className="py-2 text-gray-500 font-mono text-xs">{visit.id.slice(0, 8)}...</td>
+                  </tr>
+                ))}
+                {stats.recentVisits.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="py-4 text-gray-500 text-center">Aucune visite enregistrée</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="mt-6 text-center text-gray-600 text-xs">
+          Dernière mise à jour: {stats.lastVisit ? formatDate(stats.lastVisit) : 'Jamais'}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function StatCard({ label, value, icon, isText }: { label: string; value: number | string; icon: string; isText?: boolean }) {
+  return (
+    <div className="bg-white/5 border border-white/10 rounded-xl p-4 text-center hover:border-[#d4af37]/30 transition-colors">
+      <div className="text-2xl mb-2">{icon}</div>
+      <div className={`font-bold text-white ${isText ? 'text-sm' : 'text-2xl'}`}>
+        {isText ? value : (value as number).toLocaleString()}
+      </div>
+      <div className="text-xs text-gray-400 mt-1">{label}</div>
+    </div>
+  )
+}

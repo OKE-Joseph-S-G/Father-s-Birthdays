@@ -20,6 +20,7 @@ const Messages = dynamic(() => import('@/components/Messages'))
 const FinalWish = dynamic(() => import('@/components/FinalWish'))
 const SectionDivider = dynamic(() => import('@/components/SectionDivider'))
 const MusicPlayer = dynamic(() => import('@/components/MusicPlayer'), { ssr: false })
+const Analytics = dynamic(() => import('@/components/Analytics'), { ssr: false })
 
 export default function Home() {
   const [unlocked, setUnlocked] = useState(false)
@@ -30,6 +31,7 @@ export default function Home() {
 
   return (
     <main className="relative">
+      <Analytics />
       <SplashScreen />
       <SecretGate onUnlocked={handleUnlock} />
 
