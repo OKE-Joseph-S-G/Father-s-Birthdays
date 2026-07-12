@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 
-export default function AnimatedGradient() {
+export default function AnimatedGradient({ accent = '#d4af37', accentRgb = '212, 175, 55' }: { accent?: string; accentRgb?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
@@ -13,6 +13,8 @@ export default function AnimatedGradient() {
 
     let animationId: number
     let time = 0
+
+    const [r, g, b] = accentRgb.split(',').map((s) => parseInt(s.trim()))
 
     const resize = () => {
       canvas.width = window.innerWidth
@@ -35,14 +37,14 @@ export default function AnimatedGradient() {
       ctx.clearRect(0, 0, w, h)
 
       const g1 = ctx.createRadialGradient(x1, y1, 0, x1, y1, w * 0.5)
-      g1.addColorStop(0, 'rgba(212, 175, 55, 0.04)')
-      g1.addColorStop(1, 'rgba(212, 175, 55, 0)')
+      g1.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.04)`)
+      g1.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`)
       ctx.fillStyle = g1
       ctx.fillRect(0, 0, w, h)
 
       const g2 = ctx.createRadialGradient(x2, y2, 0, x2, y2, w * 0.4)
-      g2.addColorStop(0, 'rgba(138, 109, 0, 0.03)')
-      g2.addColorStop(1, 'rgba(138, 109, 0, 0)')
+      g2.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.03)`)
+      g2.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`)
       ctx.fillStyle = g2
       ctx.fillRect(0, 0, w, h)
 
@@ -55,7 +57,7 @@ export default function AnimatedGradient() {
       cancelAnimationFrame(animationId)
       window.removeEventListener('resize', resize)
     }
-  }, [])
+  }, [accentRgb])
 
   return (
     <canvas

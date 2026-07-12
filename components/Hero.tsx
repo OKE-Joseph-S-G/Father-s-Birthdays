@@ -1,8 +1,9 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import { type Theme } from '@/lib/themes'
 
-export default function Hero() {
+export default function Hero({ theme }: { theme: Theme }) {
   return (
     <section className="relative min-h-screen flex flex-col items-center justify-center text-center px-4">
       <motion.div
@@ -15,18 +16,24 @@ export default function Hero() {
           initial={{ opacity: 0, y: -30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5, duration: 0.8 }}
-          className="text-gold-500 font-body text-lg tracking-[0.3em] uppercase mb-4"
+          className="font-body text-lg tracking-[0.3em] uppercase mb-4"
+          style={{ color: theme.accent }}
         >
-          Avec tout mon amour
+          {theme.subtext}
         </motion.p>
 
         <motion.h1
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.8, duration: 1 }}
-          className="font-display text-6xl md:text-8xl lg:text-9xl font-bold gold-gradient mb-6"
+          className="font-display text-6xl md:text-8xl lg:text-9xl font-bold mb-6"
+          style={{
+            background: `linear-gradient(135deg, ${theme.accent}, ${theme.accentLight})`,
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+          }}
         >
-          Joyeux Anniversaire
+          {theme.greeting}
         </motion.h1>
 
         <motion.h2
@@ -35,14 +42,15 @@ export default function Hero() {
           transition={{ delay: 1.5, duration: 1 }}
           className="font-display text-3xl md:text-5xl lg:text-6xl text-white/90 italic"
         >
-          Papa
+          {theme.name}
         </motion.h2>
 
         <motion.div
           initial={{ opacity: 0, scaleX: 0 }}
           animate={{ opacity: 1, scaleX: 1 }}
           transition={{ delay: 2, duration: 0.8 }}
-          className="mt-8 mx-auto w-32 h-[2px] bg-gradient-to-r from-transparent via-gold-500 to-transparent"
+          className="mt-8 mx-auto w-32 h-[2px]"
+          style={{ background: `linear-gradient(to right, transparent, ${theme.accent}, transparent)` }}
         />
 
         <motion.p
@@ -51,7 +59,7 @@ export default function Hero() {
           transition={{ delay: 2.5, duration: 1 }}
           className="mt-8 text-white/50 font-body text-lg"
         >
-          1978 — 2026
+          {theme.yearsRange}
         </motion.p>
       </motion.div>
 
@@ -67,12 +75,7 @@ export default function Hero() {
           className="flex flex-col items-center gap-2"
         >
           <span className="text-white/30 text-sm tracking-widest">DÉCOUVRIR</span>
-          <svg
-            className="w-6 h-6 text-gold-500"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: theme.accent }}>
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
           </svg>
         </motion.div>

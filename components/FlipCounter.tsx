@@ -2,17 +2,17 @@
 
 import { motion, useInView } from 'framer-motion'
 import { useRef, useEffect, useState } from 'react'
+import { type Theme } from '@/lib/themes'
 
-const BIRTH_DATE = new Date(1978, 0, 1)
-
-function calculateAge() {
+function calculateAge(birthYear: number, birthMonth: number, birthDay: number) {
+  const birth = new Date(birthYear, birthMonth, birthDay)
   const now = new Date()
-  let years = now.getFullYear() - BIRTH_DATE.getFullYear()
-  let months = now.getMonth() - BIRTH_DATE.getMonth()
-  let days = now.getDate() - BIRTH_DATE.getDate()
-  let hours = now.getHours() - BIRTH_DATE.getHours()
-  let minutes = now.getMinutes() - BIRTH_DATE.getMinutes()
-  let seconds = now.getSeconds() - BIRTH_DATE.getSeconds()
+  let years = now.getFullYear() - birth.getFullYear()
+  let months = now.getMonth() - birth.getMonth()
+  let days = now.getDate() - birth.getDate()
+  let hours = now.getHours() - birth.getHours()
+  let minutes = now.getMinutes() - birth.getMinutes()
+  let seconds = now.getSeconds() - birth.getSeconds()
 
   if (seconds < 0) { seconds += 60; minutes-- }
   if (minutes < 0) { minutes += 60; hours-- }
@@ -27,7 +27,7 @@ function calculateAge() {
   return { years, months, days, hours, minutes, seconds }
 }
 
-function FlipUnit({ value, label }: { value: number; label: string }) {
+function FlipUnit({ value, label, accent }: { value: number; label: string; accent: string }) {
   const str = String(value).padStart(2, '0')
 
   return (
@@ -35,12 +35,11 @@ function FlipUnit({ value, label }: { value: number; label: string }) {
       <div className="flex gap-[2px]">
         {str.split('').map((digit, i) => (
           <div key={i} className="relative inline-flex flex-col items-center">
-            {/* Top half */}
             <div
               className="relative w-10 h-14 sm:w-14 sm:h-20 md:w-20 md:h-28 overflow-hidden rounded-t-lg"
               style={{
                 background: 'linear-gradient(180deg, #1a1a1a 0%, #111 100%)',
-                border: '1px solid rgba(212, 175, 55, 0.2)',
+                border: `1px solid rgba(${hexToRgb(accent)}, 0.2)`,
                 borderBottom: 'none',
               }}
             >
@@ -49,38 +48,34 @@ function FlipUnit({ value, label }: { value: number; label: string }) {
                 initial={{ y: -80 }}
                 animate={{ y: 0 }}
                 transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                className="absolute inset-0 flex items-center justify-center font-display text-3xl sm:text-4xl md:text-6xl font-bold gold-gradient"
+                className="absolute inset-0 flex items-center justify-center font-display text-3xl sm:text-4xl md:text-6xl font-bold"
+                style={{ color: accent }}
               >
                 {digit}
               </motion.span>
-              <div
-                className="absolute bottom-0 left-0 right-0 h-[1px]"
-                style={{ background: 'rgba(212, 175, 55, 0.15)' }}
-              />
+              <div className="absolute bottom-0 left-0 right-0 h-[1px]"
+                style={{ background: `rgba(${hexToRgb(accent)}, 0.15)` }} />
             </div>
 
-            {/* Bottom half */}
             <div
               className="relative w-10 h-14 sm:w-14 sm:h-20 md:w-20 md:h-28 overflow-hidden rounded-b-lg"
               style={{
                 background: 'linear-gradient(180deg, #0d0d0d 0%, #111 100%)',
-                border: '1px solid rgba(212, 175, 55, 0.2)',
-                borderTop: '1px solid rgba(212, 175, 55, 0.05)',
+                border: `1px solid rgba(${hexToRgb(accent)}, 0.2)`,
+                borderTop: `1px solid rgba(${hexToRgb(accent)}, 0.05)`,
               }}
             >
-              <span
-                className="absolute inset-0 flex items-center justify-center font-display text-3xl sm:text-4xl md:text-6xl font-bold gold-gradient"
-                style={{ opacity: 0.3 }}
-              >
+              <span className="absolute inset-0 flex items-center justify-center font-display text-3xl sm:text-4xl md:text-6xl font-bold"
+                style={{ color: accent, opacity: 0.3 }}>
                 {digit}
               </span>
             </div>
 
-            {/* Center line */}
             <div className="absolute top-1/2 -translate-y-1/2 left-0 right-0 h-[2px] bg-black/60 z-10" />
-            {/* Screws */}
-            <div className="absolute top-1/2 -translate-y-1/2 -left-[3px] w-1.5 h-1.5 rounded-full bg-gold-500/40 border border-gold-500/60" />
-            <div className="absolute top-1/2 -translate-y-1/2 -right-[3px] w-1.5 h-1.5 rounded-full bg-gold-500/40 border border-gold-500/60" />
+            <div className="absolute top-1/2 -translate-y-1/2 -left-[3px] w-1.5 h-1.5 rounded-full border"
+              style={{ background: `${accent}66`, borderColor: `${accent}99` }} />
+            <div className="absolute top-1/2 -translate-y-1/2 -right-[3px] w-1.5 h-1.5 rounded-full border"
+              style={{ background: `${accent}66`, borderColor: `${accent}99` }} />
           </div>
         ))}
       </div>
@@ -89,37 +84,39 @@ function FlipUnit({ value, label }: { value: number; label: string }) {
   )
 }
 
-function Separator() {
+function Separator({ accent }: { accent: string }) {
   return (
     <div className="flex flex-col items-center justify-center gap-2 px-1 sm:px-2 pt-1">
-      <motion.div
-        animate={{ opacity: [1, 0.3, 1] }}
-        transition={{ duration: 1, repeat: Infinity }}
-        className="w-1.5 h-1.5 rounded-full bg-gold-500"
-      />
-      <motion.div
-        animate={{ opacity: [0.3, 1, 0.3] }}
-        transition={{ duration: 1, repeat: Infinity }}
-        className="w-1.5 h-1.5 rounded-full bg-gold-500"
-      />
+      <motion.div animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 1, repeat: Infinity }}
+        className="w-1.5 h-1.5 rounded-full" style={{ background: accent }} />
+      <motion.div animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1, repeat: Infinity }}
+        className="w-1.5 h-1.5 rounded-full" style={{ background: accent }} />
     </div>
   )
 }
 
-export default function FlipCounter() {
+function hexToRgb(hex: string): string {
+  const h = hex.replace('#', '')
+  const r = parseInt(h.substring(0, 2), 16)
+  const g = parseInt(h.substring(2, 4), 16)
+  const b = parseInt(h.substring(4, 6), 16)
+  return `${r}, ${g}, ${b}`
+}
+
+export default function FlipCounter({ theme }: { theme: Theme }) {
   const ref = useRef<HTMLDivElement>(null)
   const isInView = useInView(ref, { once: true })
-  const [age, setAge] = useState(calculateAge)
+  const [age, setAge] = useState(() => calculateAge(theme.birthYear, theme.birthMonth, theme.birthDay))
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
     setMounted(true)
-    setAge(calculateAge())
+    setAge(calculateAge(theme.birthYear, theme.birthMonth, theme.birthDay))
     const timer = setInterval(() => {
-      setAge(calculateAge())
+      setAge(calculateAge(theme.birthYear, theme.birthMonth, theme.birthDay))
     }, 1000)
     return () => clearInterval(timer)
-  }, [])
+  }, [theme])
 
   const units = mounted ? [
     { value: age.years, label: 'Années' },
@@ -129,12 +126,8 @@ export default function FlipCounter() {
     { value: age.minutes, label: 'Minutes' },
     { value: age.seconds, label: 'Secondes' },
   ] : [
-    { value: 0, label: 'Années' },
-    { value: 0, label: 'Mois' },
-    { value: 0, label: 'Jours' },
-    { value: 0, label: 'Heures' },
-    { value: 0, label: 'Minutes' },
-    { value: 0, label: 'Secondes' },
+    { value: 0, label: 'Années' }, { value: 0, label: 'Mois' }, { value: 0, label: 'Jours' },
+    { value: 0, label: 'Heures' }, { value: 0, label: 'Minutes' }, { value: 0, label: 'Secondes' },
   ]
 
   return (
@@ -144,9 +137,10 @@ export default function FlipCounter() {
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6 }}
-          className="text-gold-500 font-body text-sm tracking-[0.3em] uppercase mb-8"
+          className="font-body text-sm tracking-[0.3em] uppercase mb-8"
+          style={{ color: theme.accent }}
         >
-          Depuis le 1er Janvier 1978
+          Depuis le {theme.birthLabel}
         </motion.p>
 
         <motion.div
@@ -157,8 +151,8 @@ export default function FlipCounter() {
         >
           {units.map((unit, i) => (
             <div key={unit.label} className="flex items-start">
-              <FlipUnit value={unit.value} label={unit.label} />
-              {i < units.length - 1 && <Separator />}
+              <FlipUnit value={unit.value} label={unit.label} accent={theme.accent} />
+              {i < units.length - 1 && <Separator accent={theme.accent} />}
             </div>
           ))}
         </motion.div>

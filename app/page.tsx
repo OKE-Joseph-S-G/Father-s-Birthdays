@@ -1,7 +1,8 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
+import { themes, type Theme } from '@/lib/themes'
 
 const SplashScreen = dynamic(() => import('@/components/SplashScreen'), { ssr: false })
 const SecretGate = dynamic(() => import('@/components/SecretGate'), { ssr: false })
@@ -24,11 +25,17 @@ const Analytics = dynamic(() => import('@/components/Analytics'), { ssr: false }
 const AdminDashboard = dynamic(() => import('@/components/AdminDashboard'), { ssr: false })
 
 export default function Home() {
-  const [mode, setMode] = useState<'none' | 'site' | 'admin'>('none')
+  const [mode, setMode] = useState<'none' | 'papa' | 'irene' | 'admin'>('none')
 
-  const handleUnlock = useCallback((unlockMode: 'site' | 'admin') => {
+  const handleUnlock = useCallback((unlockMode: 'papa' | 'irene' | 'admin') => {
     setMode(unlockMode)
   }, [])
+
+  const theme: Theme | null = useMemo(() => {
+    if (mode === 'papa') return themes.papa
+    if (mode === 'irene') return themes.irene
+    return null
+  }, [mode])
 
   return (
     <main className="relative">
@@ -42,10 +49,10 @@ export default function Home() {
         }} />
       )}
 
-      {mode === 'site' && (
+      {theme && (
         <>
-          <Analytics />
-          <AnimatedGradient />
+          <Analytics site={theme.id} />
+          <AnimatedGradient accent={theme.accent} accentRgb={theme.accentRgb} />
           <ScrollProgress />
           <MusicPlayer />
           <CursorTrail />
@@ -53,25 +60,25 @@ export default function Home() {
           <FireworksCanvas />
 
           <div className="relative" style={{ zIndex: 2 }}>
-            <Hero />
+            <Hero theme={theme} />
             <SectionDivider />
-            <FlipCounter />
+            <FlipCounter theme={theme} />
             <SectionDivider />
-            <LifeStats />
+            <LifeStats theme={theme} />
             <SectionDivider />
-            <Timeline />
+            <Timeline theme={theme} />
             <SectionDivider />
-            <Gallery />
+            <Gallery theme={theme} />
             <SectionDivider />
-            <LetterReveal />
+            <LetterReveal theme={theme} />
             <SectionDivider />
-            <Messages />
+            <Messages theme={theme} />
             <SectionDivider />
-            <FinalWish />
+            <FinalWish theme={theme} />
 
             <footer className="py-12 text-center border-t border-white/5">
               <p className="text-white/20 font-body text-xs tracking-wider">
-                Fait avec ❤️ pour Papa — 2026
+                {theme.footer}
               </p>
             </footer>
           </div>

@@ -3,28 +3,31 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState, useEffect, useRef } from 'react'
 
-const SITE_PASSWORD = '1978'
+const SITE_PASSWORDS: Record<string, string> = {
+  '1978': 'papa',
+  '1992': 'irene',
+}
 const ADMIN_PASSWORD = 'admin2026'
 const MAX_ATTEMPTS = 3
 
-export default function SecretGate({ onUnlocked }: { onUnlocked: (mode: 'site' | 'admin') => void }) {
+export default function SecretGate({ onUnlocked }: { onUnlocked: (mode: 'papa' | 'irene' | 'admin') => void }) {
   const [unlocked, setUnlocked] = useState(false)
   const [answer, setAnswer] = useState('')
   const [error, setError] = useState(false)
   const [attempts, setAttempts] = useState(0)
   const [showConfetti, setShowConfetti] = useState(false)
-  const [unlockMode, setUnlockMode] = useState<'site' | 'admin'>('site')
+  const [unlockMode, setUnlockMode] = useState<'papa' | 'irene' | 'admin'>('papa')
   const inputRef = useRef<HTMLInputElement>(null)
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
     setMounted(true)
-    const saved = sessionStorage.getItem('secretGate')
-    if (saved === 'unlocked') {
-      onUnlocked('site')
+    const saved = sessionStorage.getItem('secretGateSite')
+    if (saved && (saved === 'papa' || saved === 'irene')) {
+      onUnlocked(saved as 'papa' | 'irene')
     }
     const savedAdmin = sessionStorage.getItem('secretGateAdmin')
-    if (savedAdmin === 'unlocked') {
+    if (savedAdmin === 'admin') {
       onUnlocked('admin')
     }
   }, [onUnlocked])
@@ -41,18 +44,19 @@ export default function SecretGate({ onUnlocked }: { onUnlocked: (mode: 'site' |
     e.preventDefault()
     const val = answer.trim()
 
-    if (val === SITE_PASSWORD) {
-      setUnlockMode('site')
+    if (SITE_PASSWORDS[val]) {
+      const mode = SITE_PASSWORDS[val] as 'papa' | 'irene'
+      setUnlockMode(mode)
       setShowConfetti(true)
-      sessionStorage.setItem('secretGate', 'unlocked')
+      sessionStorage.setItem('secretGateSite', mode)
       setTimeout(() => {
         setUnlocked(true)
-        setTimeout(() => onUnlocked('site'), 600)
+        setTimeout(() => onUnlocked(mode), 600)
       }, 1500)
     } else if (val === ADMIN_PASSWORD) {
       setUnlockMode('admin')
       setShowConfetti(true)
-      sessionStorage.setItem('secretGateAdmin', 'unlocked')
+      sessionStorage.setItem('secretGateAdmin', 'admin')
       setTimeout(() => {
         setUnlocked(true)
         setTimeout(() => onUnlocked('admin'), 600)
@@ -91,7 +95,7 @@ export default function SecretGate({ onUnlocked }: { onUnlocked: (mode: 'site' |
             {showConfetti && (
               <>
                 {Array.from({ length: 60 }).map((_, i) => {
-                  const colors = ['#d4af37', '#f0d060', '#ff6b6b', '#4ecdc4', '#fff', '#ff9f43']
+                  const colors = ['#d4af37', '#f0d060', '#e8a0bf', '#f5c6d8', '#ff6b6b', '#4ecdc4', '#fff']
                   const color = colors[i % colors.length]
                   const angle = (Math.PI * 2 * i) / 60
                   const velocity = 5 + Math.random() * 8
@@ -131,17 +135,13 @@ export default function SecretGate({ onUnlocked }: { onUnlocked: (mode: 'site' |
                 transition={{ duration: 0.5 }}
               >
                 <div
-                  className="w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center glow-border"
+                  className="w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center"
                   style={{
                     background: showConfetti
-                      ? unlockMode === 'admin'
-                        ? 'radial-gradient(circle, #818cf8, #4338ca)'
-                        : 'radial-gradient(circle, #4ade80, #166534)'
+                      ? 'radial-gradient(circle, #4ade80, #166534)'
                       : 'radial-gradient(circle at 30% 30%, #d4af37, #8a6d00)',
                     boxShadow: showConfetti
-                      ? unlockMode === 'admin'
-                        ? '0 0 40px rgba(129, 140, 248, 0.4)'
-                        : '0 0 40px rgba(74, 222, 128, 0.4)'
+                      ? '0 0 40px rgba(74, 222, 128, 0.4)'
                       : '0 0 30px rgba(212, 175, 55, 0.3)',
                   }}
                 >
@@ -150,9 +150,7 @@ export default function SecretGate({ onUnlocked }: { onUnlocked: (mode: 'site' |
                     transition={{ duration: 0.5 }}
                     className="text-4xl sm:text-5xl"
                   >
-                    {showConfetti
-                      ? unlockMode === 'admin' ? '🛡️' : '🔓'
-                      : '🔒'}
+                    {showConfetti ? '🔓' : '🔒'}
                   </motion.span>
                 </div>
               </motion.div>
@@ -164,9 +162,7 @@ export default function SecretGate({ onUnlocked }: { onUnlocked: (mode: 'site' |
               transition={{ delay: 0.3, duration: 0.6 }}
               className="font-display text-2xl sm:text-3xl font-bold gold-gradient mb-3"
             >
-              {showConfetti
-                ? unlockMode === 'admin' ? 'Admin Mode' : 'Bienvenue !'
-                : 'Accès Réservé'}
+              {showConfetti ? 'Bienvenue !' : 'Accès Réservé'}
             </motion.h2>
 
             <motion.p
@@ -176,7 +172,7 @@ export default function SecretGate({ onUnlocked }: { onUnlocked: (mode: 'site' |
               className="text-white/40 font-body text-sm mb-8"
             >
               {showConfetti
-                ? unlockMode === 'admin' ? 'Redirection vers le dashboard...' : 'Que la fête commence...'
+                ? 'Que la fête commence...'
                 : 'Réponds à la question pour accéder au site'}
             </motion.p>
 
@@ -193,7 +189,7 @@ export default function SecretGate({ onUnlocked }: { onUnlocked: (mode: 'site' |
                     Question secrète
                   </p>
                   <p className="font-display text-lg sm:text-xl text-white/90 font-semibold">
-                    En quelle année est né Papa ?
+                    En quelle année est né(e) l&apos;anniversaire ?
                   </p>
                 </div>
 
@@ -233,7 +229,7 @@ export default function SecretGate({ onUnlocked }: { onUnlocked: (mode: 'site' |
                   >
                     {attempts >= MAX_ATTEMPTS ? (
                       <span className="text-gold-500/60">
-                        Indice : Pense à l&apos;année de sa naissance...
+                        Indice : Pense à une année de naissance...
                       </span>
                     ) : (
                       <span className="text-red-400/60">

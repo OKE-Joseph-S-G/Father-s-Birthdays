@@ -7,6 +7,7 @@ interface Visit {
   timestamp: string
   duration: number
   pages: string[]
+  site: string
 }
 
 interface Stats {
@@ -20,6 +21,7 @@ interface Stats {
   dailyVisits: Record<string, number>
   pageViews: Record<string, number>
   recentVisits: Visit[]
+  siteBreakdown: Record<string, number>
 }
 
 function formatDuration(seconds: number): string {
@@ -40,7 +42,7 @@ function formatDate(iso: string): string {
 }
 
 function toCSV(stats: Stats): string {
-  const lines = ['Date,Heure,Duree (s),Pages,Visiteur']
+  const lines = ['Date,Heure,Duree (s),Pages,Visiteur,Site']
   for (const v of stats.recentVisits) {
     const d = new Date(v.timestamp)
     lines.push([
@@ -49,6 +51,7 @@ function toCSV(stats: Stats): string {
       String(v.duration),
       v.pages.join(' > '),
       v.id.slice(0, 8),
+      v.site || 'papa',
     ].join(','))
   }
   return lines.join('\n')
@@ -61,11 +64,13 @@ export default function AdminDashboard({ onBack }: { onBack: () => void }) {
   const [lastRefresh, setLastRefresh] = useState(0)
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
+  const [siteFilter, setSiteFilter] = useState('all')
 
   useEffect(() => {
     async function fetchStats() {
       try {
-        const res = await fetch('/api/stats', {
+        const url = `/api/stats${siteFilter !== 'all' ? `?site=${siteFilter}` : ''}`
+        const res = await fetch(url, {
           headers: { Authorization: 'Bearer admin2026' },
         })
         if (!res.ok) {
@@ -85,7 +90,7 @@ export default function AdminDashboard({ onBack }: { onBack: () => void }) {
     fetchStats()
     const interval = setInterval(fetchStats, 10000)
     return () => clearInterval(interval)
-  }, [])
+  }, [siteFilter])
 
   const filteredVisits = useMemo(() => {
     if (!stats) return []
@@ -108,7 +113,7 @@ export default function AdminDashboard({ onBack }: { onBack: () => void }) {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `analytics-${new Date().toISOString().split('T')[0]}.csv`
+    a.download = `analytics-${siteFilter}-${new Date().toISOString().split('T')[0]}.csv`
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -121,10 +126,7 @@ export default function AdminDashboard({ onBack }: { onBack: () => void }) {
       const h = new Date(v.timestamp).getHours()
       hours[h]++
     }
-    return Object.entries(hours).map(([h, count]) => ({
-      hour: Number(h),
-      count,
-    }))
+    return Object.entries(hours).map(([h, count]) => ({ hour: Number(h), count }))
   }, [stats])
 
   if (loading) {
@@ -140,9 +142,7 @@ export default function AdminDashboard({ onBack }: { onBack: () => void }) {
       <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
         <div className="text-center">
           <p className="text-red-400 text-lg mb-4">{error}</p>
-          <button onClick={onBack} className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-gray-400 hover:text-white transition-all">
-            ← Retour
-          </button>
+          <button onClick={onBack} className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-gray-400 hover:text-white transition-all">← Retour</button>
         </div>
       </div>
     )
@@ -154,21 +154,43 @@ export default function AdminDashboard({ onBack }: { onBack: () => void }) {
   const sortedDays = Object.entries(stats.dailyVisits).sort(([a], [b]) => a.localeCompare(b))
   const maxPeak = Math.max(...peakHours.map((h) => h.count), 1)
 
+  const siteNames: Record<string, string> = { papa: 'Papa', irene: 'Irène' }
+
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white p-4 md:p-8">
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl md:text-4xl font-bold" style={{ fontFamily: 'Playfair Display' }}>
-              <span className="bg-gradient-to-r from-[#d4af37] to-[#f4e276] bg-clip-text text-transparent">
-                Dashboard Admin
-              </span>
+              <span className="bg-gradient-to-r from-[#d4af37] to-[#f4e276] bg-clip-text text-transparent">Dashboard Admin</span>
             </h1>
-            <p className="text-gray-400 mt-2">Statistiques du site d&apos;anniversaire de Papa</p>
+            <p className="text-gray-400 mt-2">Statistiques des sites d&apos;anniversaire</p>
           </div>
-          <button onClick={onBack} className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-gray-400 hover:text-white hover:border-[#d4af37]/30 transition-all text-sm">
-            ← Retour
-          </button>
+          <button onClick={onBack} className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-gray-400 hover:text-white hover:border-[#d4af37]/30 transition-all text-sm">← Retour</button>
+        </div>
+
+        {/* Site Filter */}
+        <div className="flex items-center gap-2 mb-6">
+          {[
+            { key: 'all', label: 'Tous les sites' },
+            { key: 'papa', label: 'Papa' },
+            { key: 'irene', label: 'Irène' },
+          ].map((s) => (
+            <button
+              key={s.key}
+              onClick={() => setSiteFilter(s.key)}
+              className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                siteFilter === s.key
+                  ? 'bg-[#d4af37] text-black'
+                  : 'bg-white/5 text-gray-400 hover:text-white border border-white/10'
+              }`}
+            >
+              {s.label}
+              {s.key !== 'all' && stats.siteBreakdown[s.key] !== undefined && (
+                <span className="ml-2 text-xs opacity-70">({stats.siteBreakdown[s.key] || 0})</span>
+              )}
+            </button>
+          ))}
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
@@ -194,9 +216,7 @@ export default function AdminDashboard({ onBack }: { onBack: () => void }) {
                   </div>
                 ))}
               </div>
-            ) : (
-              <p className="text-gray-500 text-sm text-center py-8">Aucune donnée</p>
-            )}
+            ) : <p className="text-gray-500 text-sm text-center py-8">Aucune donnée</p>}
           </div>
 
           <div className="bg-white/5 border border-white/10 rounded-xl p-6">
@@ -218,25 +238,19 @@ export default function AdminDashboard({ onBack }: { onBack: () => void }) {
           <div className="bg-white/5 border border-white/10 rounded-xl p-6">
             <h2 className="text-xl font-semibold text-[#d4af37] mb-4">Pages vues</h2>
             <div className="space-y-3">
-              {Object.entries(stats.pageViews)
-                .sort(([, a], [, b]) => b - a)
-                .slice(0, 10)
-                .map(([page, count]) => {
-                  const maxPage = Math.max(...Object.values(stats.pageViews))
-                  return (
-                    <div key={page} className="flex items-center gap-3">
-                      <span className="text-sm text-gray-300 w-32 truncate">{page || '/'}</span>
-                      <div className="flex-1 h-3 bg-white/10 rounded-full overflow-hidden">
-                        <div className="h-full bg-gradient-to-r from-[#d4af37] to-[#f4e276] rounded-full"
-                          style={{ width: `${(count / maxPage) * 100}%` }} />
-                      </div>
-                      <span className="text-sm text-gray-400 w-8 text-right">{count}</span>
+              {Object.entries(stats.pageViews).sort(([, a], [, b]) => b - a).slice(0, 10).map(([page, count]) => {
+                const maxPage = Math.max(...Object.values(stats.pageViews))
+                return (
+                  <div key={page} className="flex items-center gap-3">
+                    <span className="text-sm text-gray-300 w-32 truncate">{page || '/'}</span>
+                    <div className="flex-1 h-3 bg-white/10 rounded-full overflow-hidden">
+                      <div className="h-full bg-gradient-to-r from-[#d4af37] to-[#f4e276] rounded-full" style={{ width: `${(count / maxPage) * 100}%` }} />
                     </div>
-                  )
-                })}
-              {Object.keys(stats.pageViews).length === 0 && (
-                <p className="text-gray-500 text-sm">Aucune donnée</p>
-              )}
+                    <span className="text-sm text-gray-400 w-8 text-right">{count}</span>
+                  </div>
+                )
+              })}
+              {Object.keys(stats.pageViews).length === 0 && <p className="text-gray-500 text-sm">Aucune donnée</p>}
             </div>
           </div>
 
@@ -245,9 +259,7 @@ export default function AdminDashboard({ onBack }: { onBack: () => void }) {
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <span className="text-gray-400 text-sm">Partages / Visites</span>
-                <span className="text-white font-bold">
-                  {stats.totalVisits > 0 ? Math.round((stats.shares / stats.totalVisits) * 100) : 0}%
-                </span>
+                <span className="text-white font-bold">{stats.totalVisits > 0 ? Math.round((stats.shares / stats.totalVisits) * 100) : 0}%</span>
               </div>
               <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
                 <div className="h-full bg-gradient-to-r from-[#4ecdc4] to-[#2dd4bf] rounded-full"
@@ -255,18 +267,23 @@ export default function AdminDashboard({ onBack }: { onBack: () => void }) {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-400 text-sm">Vues / Visite</span>
-                <span className="text-white font-bold">
-                  {stats.totalVisits > 0 ? (stats.totalViews / stats.totalVisits).toFixed(1) : '0'}
-                </span>
+                <span className="text-white font-bold">{stats.totalVisits > 0 ? (stats.totalViews / stats.totalVisits).toFixed(1) : '0'}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-400 text-sm">Temps moyen</span>
                 <span className="text-white font-bold">{formatDuration(stats.avgTimePerVisit)}</span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-400 text-sm">Dernière visite</span>
-                <span className="text-white text-sm">{stats.lastVisit ? formatDate(stats.lastVisit) : 'Jamais'}</span>
-              </div>
+              {Object.keys(stats.siteBreakdown).length > 1 && (
+                <div className="pt-2 border-t border-white/10">
+                  <p className="text-gray-400 text-sm mb-2">Par site :</p>
+                  {Object.entries(stats.siteBreakdown).map(([site, count]) => (
+                    <div key={site} className="flex justify-between items-center">
+                      <span className="text-gray-400 text-sm">{siteNames[site] || site}</span>
+                      <span className="text-white font-bold">{count} visites</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -297,6 +314,7 @@ export default function AdminDashboard({ onBack }: { onBack: () => void }) {
                   <th className="text-left py-2">Date</th>
                   <th className="text-left py-2">Durée</th>
                   <th className="text-left py-2">Pages</th>
+                  <th className="text-left py-2">Site</th>
                   <th className="text-left py-2">Visiteur</th>
                 </tr>
               </thead>
@@ -306,11 +324,17 @@ export default function AdminDashboard({ onBack }: { onBack: () => void }) {
                     <td className="py-2 text-gray-300">{formatDate(visit.timestamp)}</td>
                     <td className="py-2 text-gray-300">{formatDuration(visit.duration)}</td>
                     <td className="py-2 text-gray-400">{visit.pages.join(' → ')}</td>
+                    <td className="py-2">
+                      <span className="px-2 py-0.5 rounded text-xs font-medium"
+                        style={{ background: visit.site === 'irene' ? 'rgba(232,160,191,0.15)' : 'rgba(212,175,55,0.15)', color: visit.site === 'irene' ? '#e8a0bf' : '#d4af37' }}>
+                        {siteNames[visit.site] || visit.site}
+                      </span>
+                    </td>
                     <td className="py-2 text-gray-500 font-mono text-xs">{visit.id.slice(0, 8)}...</td>
                   </tr>
                 ))}
                 {filteredVisits.length === 0 && (
-                  <tr><td colSpan={4} className="py-4 text-gray-500 text-center">
+                  <tr><td colSpan={5} className="py-4 text-gray-500 text-center">
                     {dateFrom || dateTo ? 'Aucune visite pour cette période' : 'Aucune visite enregistrée'}
                   </td></tr>
                 )}

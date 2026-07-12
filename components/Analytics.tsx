@@ -12,7 +12,7 @@ function getVisitorId(): string {
   return id
 }
 
-async function track(type: string, data: Record<string, string | number> = {}) {
+async function track(type: string, site: string, data: Record<string, string | number> = {}) {
   try {
     await fetch('/api/track', {
       method: 'POST',
@@ -20,6 +20,7 @@ async function track(type: string, data: Record<string, string | number> = {}) {
       body: JSON.stringify({
         type,
         visitorId: getVisitorId(),
+        site,
         page: typeof window !== 'undefined' ? window.location.pathname : '/',
         ...data,
       }),
@@ -27,16 +28,18 @@ async function track(type: string, data: Record<string, string | number> = {}) {
   } catch {}
 }
 
-export default function Analytics() {
+export default function Analytics({ site = 'papa' }: { site?: string }) {
   const startTime = useRef<number>(Date.now())
   const hasTrackedVisit = useRef(false)
+  const siteRef = useRef(site)
+  siteRef.current = site
 
   useEffect(() => {
     if (hasTrackedVisit.current) return
     hasTrackedVisit.current = true
 
-    track('visit')
-    track('pageview')
+    track('visit', siteRef.current)
+    track('pageview', siteRef.current)
 
     const handleVisibility = () => {
       if (document.visibilityState === 'hidden') {
@@ -49,6 +52,7 @@ export default function Analytics() {
                 JSON.stringify({
                   type: 'time',
                   visitorId: getVisitorId(),
+                  site: siteRef.current,
                   duration: elapsed,
                 }),
               ],
@@ -65,14 +69,10 @@ export default function Analytics() {
       document.removeEventListener('visibilitychange', handleVisibility)
       const elapsed = Math.round((Date.now() - startTime.current) / 1000)
       if (elapsed > 0) {
-        track('time', { duration: elapsed })
+        track('time', siteRef.current, { duration: elapsed })
       }
     }
   }, [])
 
   return null
-}
-
-export function trackShare() {
-  track('share')
 }

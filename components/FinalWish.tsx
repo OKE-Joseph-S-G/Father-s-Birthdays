@@ -3,10 +3,11 @@
 import { motion, useInView } from 'framer-motion'
 import { useRef, useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
+import { type Theme } from '@/lib/themes'
 
 const InteractiveCake = dynamic(() => import('./InteractiveCake'), { ssr: false })
 
-function TypewriterText({ text, delay = 0 }: { text: string; delay?: number }) {
+function TypewriterText({ text, delay = 0, accent }: { text: string; delay?: number; accent: string }) {
   const [displayed, setDisplayed] = useState('')
   const [started, setStarted] = useState(false)
   const ref = useRef<HTMLSpanElement>(null)
@@ -19,8 +20,7 @@ function TypewriterText({ text, delay = 0 }: { text: string; delay?: number }) {
   }, [isInView, delay])
 
   useEffect(() => {
-    if (!started) return
-    if (displayed.length >= text.length) return
+    if (!started || displayed.length >= text.length) return
     const timer = setTimeout(() => {
       setDisplayed(text.slice(0, displayed.length + 1))
     }, 50)
@@ -31,13 +31,13 @@ function TypewriterText({ text, delay = 0 }: { text: string; delay?: number }) {
     <span ref={ref}>
       {displayed}
       {displayed.length < text.length && started && (
-        <span className="text-gold-500 animate-pulse">|</span>
+        <span style={{ color: accent }} className="animate-pulse">|</span>
       )}
     </span>
   )
 }
 
-export default function FinalWish() {
+export default function FinalWish({ theme }: { theme: Theme }) {
   const ref = useRef<HTMLDivElement>(null)
   const isInView = useInView(ref, { once: true })
 
@@ -49,7 +49,6 @@ export default function FinalWish() {
           animate={isInView ? { opacity: 1 } : {}}
           transition={{ duration: 1 }}
         >
-          {/* Interactive Cake with Easter Egg */}
           <motion.div
             initial={{ scale: 0 }}
             animate={isInView ? { scale: 1 } : {}}
@@ -60,40 +59,33 @@ export default function FinalWish() {
           </motion.div>
 
           <div className="font-display text-2xl md:text-3xl lg:text-4xl text-white/90 leading-relaxed space-y-6">
-            <p>
-              <TypewriterText
-                text="Papa, tu es bien plus qu'un père."
-                delay={500}
-              />
-            </p>
-            <p className="text-gold-500">
-              <TypewriterText
-                text="Tu es un héros, un modèle, et la plus belle bénédiction de nos vies."
-                delay={2500}
-              />
-            </p>
-            <p>
-              <TypewriterText
-                text="Que cette nouvelle année t'apporte tout le bonheur que tu mérites."
-                delay={5500}
-              />
-            </p>
+            {theme.finalWish.map((line, i) => (
+              <p key={i} style={i === 1 ? { color: theme.accent } : {}}>
+                <TypewriterText text={line} delay={500 + i * 2000} accent={theme.accent} />
+              </p>
+            ))}
           </div>
 
           <motion.div
             initial={{ opacity: 0, scaleX: 0 }}
             animate={isInView ? { opacity: 1, scaleX: 1 } : {}}
             transition={{ delay: 8, duration: 0.8 }}
-            className="my-12 mx-auto w-48 h-[2px] bg-gradient-to-r from-transparent via-gold-500 to-transparent"
+            className="my-12 mx-auto w-48 h-[2px]"
+            style={{ background: `linear-gradient(to right, transparent, ${theme.accent}, transparent)` }}
           />
 
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ delay: 9, duration: 1 }}
-            className="font-display text-xl md:text-2xl italic gold-gradient"
+            className="font-display text-xl md:text-2xl italic"
+            style={{
+              background: `linear-gradient(135deg, ${theme.accent}, ${theme.accentLight})`,
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }}
           >
-            Joyeux Anniversaire, Papa !
+            {theme.finalSign}
           </motion.p>
 
           <motion.p
@@ -102,7 +94,7 @@ export default function FinalWish() {
             transition={{ delay: 10, duration: 1 }}
             className="mt-6 text-white/30 font-body text-sm"
           >
-            Avec tout mon amour, aujourd&apos:hui et pour toujours ❤️
+            {theme.subtext}, aujourd&apos:hui et pour toujours ❤️
           </motion.p>
         </motion.div>
       </div>
