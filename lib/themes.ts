@@ -134,14 +134,14 @@ export const themes: Record<string, Theme> = {
     finalSign: 'Joyeux Anniversaire, Irène !',
     footer: 'Fait avec ❤️ pour Irène — 2026',
     galleryImages: [
-      '/images/aunt/IMG-20260712-WA0007.jpg',
-      '/images/aunt/IMG-20260712-WA0008.jpg',
-      '/images/aunt/IMG-20260712-WA0009.jpg',
       '/images/aunt/IMG-20260712-WA0011.jpg',
       '/images/aunt/IMG-20260712-WA0012.jpg',
       '/images/aunt/IMG-20260712-WA0013.jpg',
       '/images/aunt/IMG-20260712-WA0015.jpg',
       '/images/aunt/IMG-20260712-WA0016.jpg',
+      '/images/aunt/IMG-20260712-WA0018.jpg',
+      '/images/aunt/IMG-20260712-WA0019.jpg',
+      '/images/aunt/IMG-20260712-WA0025.jpg',
     ],
   },
 }
