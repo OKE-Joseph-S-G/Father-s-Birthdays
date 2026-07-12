@@ -142,9 +142,6 @@ export const themes: Record<string, Theme> = {
       '/images/aunt/IMG-20260712-WA0013.jpg',
       '/images/aunt/IMG-20260712-WA0015.jpg',
       '/images/aunt/IMG-20260712-WA0016.jpg',
-      '/images/aunt/IMG-20260712-WA0018.jpg',
-      '/images/aunt/IMG-20260712-WA0019.jpg',
-      '/images/aunt/IMG-20260712-WA0025.jpg',
     ],
   },
 }
