@@ -22,7 +22,6 @@ const SectionDivider = dynamic(() => import('@/components/SectionDivider'))
 const MusicPlayer = dynamic(() => import('@/components/MusicPlayer'), { ssr: false })
 const Analytics = dynamic(() => import('@/components/Analytics'), { ssr: false })
 const AdminDashboard = dynamic(() => import('@/components/AdminDashboard'), { ssr: false })
-const ShareButton = dynamic(() => import('@/components/ShareButton'), { ssr: false })
 
 export default function Home() {
   const [mode, setMode] = useState<'none' | 'site' | 'admin'>('none')
@@ -52,7 +51,6 @@ export default function Home() {
           <CursorTrail />
           <FloatingParticles />
           <FireworksCanvas />
-          <ShareButton />
 
           <div className="relative" style={{ zIndex: 2 }}>
             <Hero />
