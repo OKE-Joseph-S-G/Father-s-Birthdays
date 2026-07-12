@@ -1,13 +1,12 @@
 'use client'
 
 import { motion, useInView } from 'framer-motion'
-import { useRef, useState } from 'react'
+import { useRef } from 'react'
 import { type Theme } from '@/lib/themes'
 
 function PhotoCard({ src, index, accent, accentRgb }: { src: string; index: number; accent: string; accentRgb: string }) {
   const ref = useRef<HTMLDivElement>(null)
   const isInView = useInView(ref, { once: true })
-  const [loaded, setLoaded] = useState(false)
 
   return (
     <motion.div
@@ -22,16 +21,11 @@ function PhotoCard({ src, index, accent, accentRgb }: { src: string; index: numb
           border: `1px solid rgba(${accentRgb}, 0.2)`,
         }}
       >
-        {!loaded && (
-          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-dark-700 to-dark-800">
-            <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: `${accent} transparent` }} />
-          </div>
-        )}
         <img
           src={src}
           alt={`Photo ${index + 1}`}
-          className={`w-full h-full object-cover transition-all duration-500 group-hover:scale-110 ${loaded ? 'opacity-100' : 'opacity-0 absolute'}`}
-          onLoad={() => setLoaded(true)}
+          className="w-full h-full object-cover transition-opacity duration-500 group-hover:scale-110"
+          loading="lazy"
         />
         <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
           style={{ background: `linear-gradient(to top, rgba(0,0,0,0.5), transparent)` }} />
