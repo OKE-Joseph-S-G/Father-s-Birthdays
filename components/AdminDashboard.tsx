@@ -1,6 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+
+interface Visit {
+  id: string
+  timestamp: string
+  duration: number
+  pages: string[]
+}
 
 interface Stats {
   totalVisits: number
@@ -12,12 +19,7 @@ interface Stats {
   lastVisit: string
   dailyVisits: Record<string, number>
   pageViews: Record<string, number>
-  recentVisits: Array<{
-    id: string
-    timestamp: string
-    duration: number
-    pages: string[]
-  }>
+  recentVisits: Visit[]
 }
 
 function formatDuration(seconds: number): string {
@@ -26,20 +28,30 @@ function formatDuration(seconds: number): string {
   const secs = seconds % 60
   if (mins < 60) return `${mins}m ${secs}s`
   const hours = Math.floor(mins / 60)
-  const remainMins = mins % 60
-  return `${hours}h ${remainMins}m`
+  return `${hours}h ${mins % 60}m`
 }
 
 function formatDate(iso: string): string {
   if (!iso) return 'Jamais'
-  const d = new Date(iso)
-  return d.toLocaleDateString('fr-FR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
+  return new Date(iso).toLocaleDateString('fr-FR', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
   })
+}
+
+function toCSV(stats: Stats): string {
+  const lines = ['Date,Heure,Duree (s),Pages,Visiteur']
+  for (const v of stats.recentVisits) {
+    const d = new Date(v.timestamp)
+    lines.push([
+      d.toLocaleDateString('fr-FR'),
+      d.toLocaleTimeString('fr-FR'),
+      String(v.duration),
+      v.pages.join(' > '),
+      v.id.slice(0, 8),
+    ].join(','))
+  }
+  return lines.join('\n')
 }
 
 export default function AdminDashboard({ onBack }: { onBack: () => void }) {
@@ -47,6 +59,8 @@ export default function AdminDashboard({ onBack }: { onBack: () => void }) {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
   const [lastRefresh, setLastRefresh] = useState(0)
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
 
   useEffect(() => {
     async function fetchStats() {
@@ -68,11 +82,50 @@ export default function AdminDashboard({ onBack }: { onBack: () => void }) {
         setLoading(false)
       }
     }
-
     fetchStats()
     const interval = setInterval(fetchStats, 10000)
     return () => clearInterval(interval)
   }, [])
+
+  const filteredVisits = useMemo(() => {
+    if (!stats) return []
+    let visits = stats.recentVisits
+    if (dateFrom) {
+      const from = new Date(dateFrom).getTime()
+      visits = visits.filter((v) => new Date(v.timestamp).getTime() >= from)
+    }
+    if (dateTo) {
+      const to = new Date(dateTo).getTime() + 86400000
+      visits = visits.filter((v) => new Date(v.timestamp).getTime() < to)
+    }
+    return visits
+  }, [stats, dateFrom, dateTo])
+
+  function exportCSV() {
+    if (!stats) return
+    const csv = toCSV({ ...stats, recentVisits: filteredVisits })
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `analytics-${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const peakHours = useMemo(() => {
+    if (!stats) return []
+    const hours: Record<number, number> = {}
+    for (let i = 0; i < 24; i++) hours[i] = 0
+    for (const v of stats.recentVisits) {
+      const h = new Date(v.timestamp).getHours()
+      hours[h]++
+    }
+    return Object.entries(hours).map(([h, count]) => ({
+      hour: Number(h),
+      count,
+    }))
+  }, [stats])
 
   if (loading) {
     return (
@@ -87,10 +140,7 @@ export default function AdminDashboard({ onBack }: { onBack: () => void }) {
       <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
         <div className="text-center">
           <p className="text-red-400 text-lg mb-4">{error}</p>
-          <button
-            onClick={onBack}
-            className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-gray-400 hover:text-white transition-all"
-          >
+          <button onClick={onBack} className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-gray-400 hover:text-white transition-all">
             ← Retour
           </button>
         </div>
@@ -102,6 +152,7 @@ export default function AdminDashboard({ onBack }: { onBack: () => void }) {
 
   const maxDaily = Math.max(...Object.values(stats.dailyVisits), 1)
   const sortedDays = Object.entries(stats.dailyVisits).sort(([a], [b]) => a.localeCompare(b))
+  const maxPeak = Math.max(...peakHours.map((h) => h.count), 1)
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white p-4 md:p-8">
@@ -115,10 +166,7 @@ export default function AdminDashboard({ onBack }: { onBack: () => void }) {
             </h1>
             <p className="text-gray-400 mt-2">Statistiques du site d&apos;anniversaire de Papa</p>
           </div>
-          <button
-            onClick={onBack}
-            className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-gray-400 hover:text-white hover:border-[#d4af37]/30 transition-all text-sm"
-          >
+          <button onClick={onBack} className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-gray-400 hover:text-white hover:border-[#d4af37]/30 transition-all text-sm">
             ← Retour
           </button>
         </div>
@@ -140,19 +188,33 @@ export default function AdminDashboard({ onBack }: { onBack: () => void }) {
                 {sortedDays.map(([day, count]) => (
                   <div key={day} className="flex-1 flex flex-col items-center gap-1">
                     <span className="text-xs text-gray-400">{count}</span>
-                    <div
-                      className="w-full bg-gradient-to-t from-[#d4af37] to-[#f4e276] rounded-t-md transition-all"
-                      style={{ height: `${(count / maxDaily) * 100}%`, minHeight: count > 0 ? '4px' : '0' }}
-                    />
+                    <div className="w-full bg-gradient-to-t from-[#d4af37] to-[#f4e276] rounded-t-md transition-all"
+                      style={{ height: `${(count / maxDaily) * 100}%`, minHeight: count > 0 ? '4px' : '0' }} />
                     <span className="text-[10px] text-gray-500">{day.slice(5)}</span>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-gray-500 text-sm text-center py-8">Aucune donnée pour le moment</p>
+              <p className="text-gray-500 text-sm text-center py-8">Aucune donnée</p>
             )}
           </div>
 
+          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+            <h2 className="text-xl font-semibold text-[#d4af37] mb-4">Heures de pointe</h2>
+            <div className="flex items-end gap-1 h-48">
+              {peakHours.map(({ hour, count }) => (
+                <div key={hour} className="flex-1 flex flex-col items-center gap-1">
+                  {count > 0 && <span className="text-[10px] text-gray-400">{count}</span>}
+                  <div className="w-full bg-gradient-to-t from-[#818cf8] to-[#c4b5fd] rounded-t-md transition-all"
+                    style={{ height: `${(count / maxPeak) * 100}%`, minHeight: count > 0 ? '3px' : '0' }} />
+                  {hour % 4 === 0 && <span className="text-[9px] text-gray-500">{hour}h</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           <div className="bg-white/5 border border-white/10 rounded-xl p-6">
             <h2 className="text-xl font-semibold text-[#d4af37] mb-4">Pages vues</h2>
             <div className="space-y-3">
@@ -165,36 +227,81 @@ export default function AdminDashboard({ onBack }: { onBack: () => void }) {
                     <div key={page} className="flex items-center gap-3">
                       <span className="text-sm text-gray-300 w-32 truncate">{page || '/'}</span>
                       <div className="flex-1 h-3 bg-white/10 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-gradient-to-r from-[#d4af37] to-[#f4e276] rounded-full"
-                          style={{ width: `${(count / maxPage) * 100}%` }}
-                        />
+                        <div className="h-full bg-gradient-to-r from-[#d4af37] to-[#f4e276] rounded-full"
+                          style={{ width: `${(count / maxPage) * 100}%` }} />
                       </div>
                       <span className="text-sm text-gray-400 w-8 text-right">{count}</span>
                     </div>
                   )
                 })}
               {Object.keys(stats.pageViews).length === 0 && (
-                <p className="text-gray-500 text-sm">Aucune donnée pour le moment</p>
+                <p className="text-gray-500 text-sm">Aucune donnée</p>
               )}
+            </div>
+          </div>
+
+          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+            <h2 className="text-xl font-semibold text-[#d4af37] mb-4">Ratio</h2>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-400 text-sm">Partages / Visites</span>
+                <span className="text-white font-bold">
+                  {stats.totalVisits > 0 ? Math.round((stats.shares / stats.totalVisits) * 100) : 0}%
+                </span>
+              </div>
+              <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-[#4ecdc4] to-[#2dd4bf] rounded-full"
+                  style={{ width: `${stats.totalVisits > 0 ? Math.min((stats.shares / stats.totalVisits) * 100, 100) : 0}%` }} />
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-400 text-sm">Vues / Visite</span>
+                <span className="text-white font-bold">
+                  {stats.totalVisits > 0 ? (stats.totalViews / stats.totalVisits).toFixed(1) : '0'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-400 text-sm">Temps moyen</span>
+                <span className="text-white font-bold">{formatDuration(stats.avgTimePerVisit)}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-400 text-sm">Dernière visite</span>
+                <span className="text-white text-sm">{stats.lastVisit ? formatDate(stats.lastVisit) : 'Jamais'}</span>
+              </div>
             </div>
           </div>
         </div>
 
         <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-          <h2 className="text-xl font-semibold text-[#d4af37] mb-4">Visites récentes</h2>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3">
+            <h2 className="text-xl font-semibold text-[#d4af37]">Visites récentes</h2>
+            <div className="flex items-center gap-2 flex-wrap">
+              <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
+                className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-sm text-gray-300 focus:outline-none focus:border-[#d4af37]/50" />
+              <span className="text-gray-500 text-sm">→</span>
+              <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
+                className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-sm text-gray-300 focus:outline-none focus:border-[#d4af37]/50" />
+              {(dateFrom || dateTo) && (
+                <button onClick={() => { setDateFrom(''); setDateTo('') }}
+                  className="text-xs text-gray-500 hover:text-white transition-colors">Effacer</button>
+              )}
+              <button onClick={exportCSV}
+                className="px-3 py-1.5 bg-[#d4af37]/10 border border-[#d4af37]/30 rounded-lg text-sm text-[#d4af37] hover:bg-[#d4af37]/20 transition-colors">
+                📥 CSV
+              </button>
+            </div>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-gray-400 border-b border-white/10">
                   <th className="text-left py-2">Date</th>
                   <th className="text-left py-2">Durée</th>
-                  <th className="text-left py-2">Pages visitées</th>
+                  <th className="text-left py-2">Pages</th>
                   <th className="text-left py-2">Visiteur</th>
                 </tr>
               </thead>
               <tbody>
-                {stats.recentVisits.map((visit, i) => (
+                {filteredVisits.map((visit, i) => (
                   <tr key={i} className="border-b border-white/5 hover:bg-white/5">
                     <td className="py-2 text-gray-300">{formatDate(visit.timestamp)}</td>
                     <td className="py-2 text-gray-300">{formatDuration(visit.duration)}</td>
@@ -202,10 +309,10 @@ export default function AdminDashboard({ onBack }: { onBack: () => void }) {
                     <td className="py-2 text-gray-500 font-mono text-xs">{visit.id.slice(0, 8)}...</td>
                   </tr>
                 ))}
-                {stats.recentVisits.length === 0 && (
-                  <tr>
-                    <td colSpan={4} className="py-4 text-gray-500 text-center">Aucune visite enregistrée</td>
-                  </tr>
+                {filteredVisits.length === 0 && (
+                  <tr><td colSpan={4} className="py-4 text-gray-500 text-center">
+                    {dateFrom || dateTo ? 'Aucune visite pour cette période' : 'Aucune visite enregistrée'}
+                  </td></tr>
                 )}
               </tbody>
             </table>
@@ -213,7 +320,7 @@ export default function AdminDashboard({ onBack }: { onBack: () => void }) {
         </div>
 
         <div className="mt-6 text-center text-gray-600 text-xs">
-          Dernière mise à jour : {lastRefresh ? formatDate(new Date(lastRefresh).toISOString()) : 'Jamais'} • Auto-refresh toutes les 10s
+          Dernière mise à jour : {lastRefresh ? formatDate(new Date(lastRefresh).toISOString()) : 'Jamais'} • Auto-refresh 10s
         </div>
       </div>
     </div>
