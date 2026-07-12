@@ -5,7 +5,7 @@ import { useRef, useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { type Theme } from '@/lib/themes'
 
-const InteractiveCake = dynamic(() => import('./InteractiveCake'), { ssr: false })
+const InteractiveCake = dynamic(() => import('@/components/shared/InteractiveCake'), { ssr: false })
 
 function TypewriterText({ text, delay = 0, accent }: { text: string; delay?: number; accent: string }) {
   const [displayed, setDisplayed] = useState('')
