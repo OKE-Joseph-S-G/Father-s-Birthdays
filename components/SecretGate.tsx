@@ -3,15 +3,17 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState, useEffect, useRef } from 'react'
 
-const CORRECT_ANSWER = '1978'
+const SITE_PASSWORD = '1978'
+const ADMIN_PASSWORD = 'admin2026'
 const MAX_ATTEMPTS = 3
 
-export default function SecretGate({ onUnlocked }: { onUnlocked: () => void }) {
+export default function SecretGate({ onUnlocked }: { onUnlocked: (mode: 'site' | 'admin') => void }) {
   const [unlocked, setUnlocked] = useState(false)
   const [answer, setAnswer] = useState('')
   const [error, setError] = useState(false)
   const [attempts, setAttempts] = useState(0)
   const [showConfetti, setShowConfetti] = useState(false)
+  const [unlockMode, setUnlockMode] = useState<'site' | 'admin'>('site')
   const inputRef = useRef<HTMLInputElement>(null)
   const [mounted, setMounted] = useState(false)
 
@@ -19,7 +21,11 @@ export default function SecretGate({ onUnlocked }: { onUnlocked: () => void }) {
     setMounted(true)
     const saved = sessionStorage.getItem('secretGate')
     if (saved === 'unlocked') {
-      onUnlocked()
+      onUnlocked('site')
+    }
+    const savedAdmin = sessionStorage.getItem('secretGateAdmin')
+    if (savedAdmin === 'unlocked') {
+      onUnlocked('admin')
     }
   }, [onUnlocked])
 
@@ -33,12 +39,23 @@ export default function SecretGate({ onUnlocked }: { onUnlocked: () => void }) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (answer.trim() === CORRECT_ANSWER) {
+    const val = answer.trim()
+
+    if (val === SITE_PASSWORD) {
+      setUnlockMode('site')
       setShowConfetti(true)
       sessionStorage.setItem('secretGate', 'unlocked')
       setTimeout(() => {
         setUnlocked(true)
-        setTimeout(() => onUnlocked(), 600)
+        setTimeout(() => onUnlocked('site'), 600)
+      }, 1500)
+    } else if (val === ADMIN_PASSWORD) {
+      setUnlockMode('admin')
+      setShowConfetti(true)
+      sessionStorage.setItem('secretGateAdmin', 'unlocked')
+      setTimeout(() => {
+        setUnlocked(true)
+        setTimeout(() => onUnlocked('admin'), 600)
       }, 1500)
     } else {
       setError(true)
@@ -57,10 +74,8 @@ export default function SecretGate({ onUnlocked }: { onUnlocked: () => void }) {
           className="fixed inset-0 flex flex-col items-center justify-center px-4"
           style={{ zIndex: 200 }}
         >
-          {/* Background */}
           <div className="absolute inset-0 bg-dark-900/98 backdrop-blur-lg" />
 
-          {/* Decorative rings */}
           <motion.div
             animate={{ rotate: 360 }}
             transition={{ duration: 25, repeat: Infinity, ease: 'linear' }}
@@ -72,7 +87,6 @@ export default function SecretGate({ onUnlocked }: { onUnlocked: () => void }) {
             className="absolute w-[550px] h-[550px] sm:w-[700px] sm:h-[700px] rounded-full border border-gold-500/3"
           />
 
-          {/* Confetti */}
           <AnimatePresence>
             {showConfetti && (
               <>
@@ -105,9 +119,7 @@ export default function SecretGate({ onUnlocked }: { onUnlocked: () => void }) {
             )}
           </AnimatePresence>
 
-          {/* Content */}
           <div className="relative z-10 flex flex-col items-center text-center max-w-md w-full">
-            {/* Lock icon */}
             <motion.div
               initial={{ scale: 0, rotate: -20 }}
               animate={{ scale: 1, rotate: 0 }}
@@ -122,10 +134,14 @@ export default function SecretGate({ onUnlocked }: { onUnlocked: () => void }) {
                   className="w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center glow-border"
                   style={{
                     background: showConfetti
-                      ? 'radial-gradient(circle, #4ade80, #166534)'
+                      ? unlockMode === 'admin'
+                        ? 'radial-gradient(circle, #818cf8, #4338ca)'
+                        : 'radial-gradient(circle, #4ade80, #166534)'
                       : 'radial-gradient(circle at 30% 30%, #d4af37, #8a6d00)',
                     boxShadow: showConfetti
-                      ? '0 0 40px rgba(74, 222, 128, 0.4)'
+                      ? unlockMode === 'admin'
+                        ? '0 0 40px rgba(129, 140, 248, 0.4)'
+                        : '0 0 40px rgba(74, 222, 128, 0.4)'
                       : '0 0 30px rgba(212, 175, 55, 0.3)',
                   }}
                 >
@@ -134,20 +150,23 @@ export default function SecretGate({ onUnlocked }: { onUnlocked: () => void }) {
                     transition={{ duration: 0.5 }}
                     className="text-4xl sm:text-5xl"
                   >
-                    {showConfetti ? '🔓' : '🔒'}
+                    {showConfetti
+                      ? unlockMode === 'admin' ? '🛡️' : '🔓'
+                      : '🔒'}
                   </motion.span>
                 </div>
               </motion.div>
             </motion.div>
 
-            {/* Title */}
             <motion.h2
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3, duration: 0.6 }}
               className="font-display text-2xl sm:text-3xl font-bold gold-gradient mb-3"
             >
-              {showConfetti ? 'Bienvenue !' : 'Accès Réservé'}
+              {showConfetti
+                ? unlockMode === 'admin' ? 'Admin Mode' : 'Bienvenue !'
+                : 'Accès Réservé'}
             </motion.h2>
 
             <motion.p
@@ -157,11 +176,10 @@ export default function SecretGate({ onUnlocked }: { onUnlocked: () => void }) {
               className="text-white/40 font-body text-sm mb-8"
             >
               {showConfetti
-                ? 'Que la fête commence...'
+                ? unlockMode === 'admin' ? 'Redirection vers le dashboard...' : 'Que la fête commence...'
                 : 'Réponds à la question pour accéder au site'}
             </motion.p>
 
-            {/* Form */}
             {!showConfetti && (
               <motion.form
                 initial={{ opacity: 0, y: 20 }}
@@ -170,7 +188,6 @@ export default function SecretGate({ onUnlocked }: { onUnlocked: () => void }) {
                 onSubmit={handleSubmit}
                 className="w-full"
               >
-                {/* Question */}
                 <div className="bg-dark-700/50 border border-gold-500/20 rounded-2xl p-6 sm:p-8 backdrop-blur-sm mb-6">
                   <p className="text-gold-500/80 font-body text-xs tracking-[0.2em] uppercase mb-3">
                     Question secrète
@@ -180,24 +197,20 @@ export default function SecretGate({ onUnlocked }: { onUnlocked: () => void }) {
                   </p>
                 </div>
 
-                {/* Input */}
                 <div className="relative mb-4">
                   <input
                     ref={inputRef}
                     type="text"
-                    inputMode="numeric"
                     value={answer}
                     onChange={(e) => {
                       setAnswer(e.target.value)
                       setError(false)
                     }}
                     placeholder="Ta réponse..."
-                    maxLength={4}
                     className="w-full bg-dark-700/60 border border-gold-500/30 rounded-xl px-6 py-4 text-center font-display text-2xl sm:text-3xl text-white tracking-[0.3em] placeholder:text-white/15 placeholder:tracking-normal placeholder:text-base focus:outline-none focus:border-gold-500/60 focus:shadow-[0_0_20px_rgba(212,175,55,0.15)] transition-all duration-300"
                   />
                 </div>
 
-                {/* Submit button */}
                 <motion.button
                   type="submit"
                   whileHover={{ scale: 1.02 }}
@@ -212,7 +225,6 @@ export default function SecretGate({ onUnlocked }: { onUnlocked: () => void }) {
                   Déverrouiller
                 </motion.button>
 
-                {/* Attempts */}
                 {attempts > 0 && (
                   <motion.p
                     initial={{ opacity: 0, y: 10 }}

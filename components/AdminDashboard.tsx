@@ -1,24 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-
-interface Stats {
-  totalVisits: number
-  uniqueVisitors: number
-  totalViews: number
-  totalTimeSpent: number
-  avgTimePerVisit: number
-  shares: number
-  lastVisit: string
-  dailyVisits: Record<string, number>
-  pageViews: Record<string, number>
-  recentVisits: Array<{
-    id: string
-    timestamp: string
-    duration: number
-    pages: string[]
-  }>
-}
+import { getAnalytics, type AnalyticsData } from '@/lib/analytics'
 
 function formatDuration(seconds: number): string {
   if (seconds < 60) return `${seconds}s`
@@ -42,34 +25,22 @@ function formatDate(iso: string): string {
   })
 }
 
-export default function AdminDashboard({ password }: { password: string }) {
-  const [stats, setStats] = useState<Stats | null>(null)
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(true)
+export default function AdminDashboard({ onBack }: { onBack: () => void }) {
+  const [stats, setStats] = useState<AnalyticsData | null>(null)
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    async function fetchStats() {
-      try {
-        const res = await fetch('/api/stats', {
-          headers: { Authorization: `Bearer ${password}` },
-        })
-        if (!res.ok) {
-          setError('Mot de passe incorrect ou erreur serveur')
-          setLoading(false)
-          return
-        }
-        const data = await res.json()
-        setStats(data)
-      } catch {
-        setError('Erreur de connexion')
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchStats()
-  }, [password])
+    setMounted(true)
+    setStats(getAnalytics())
 
-  if (loading) {
+    const interval = setInterval(() => {
+      setStats(getAnalytics())
+    }, 5000)
+
+    return () => clearInterval(interval)
+  }, [])
+
+  if (!mounted || !stats) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
         <div className="w-8 h-8 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" />
@@ -77,29 +48,28 @@ export default function AdminDashboard({ password }: { password: string }) {
     )
   }
 
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
-        <p className="text-red-400 text-lg">{error}</p>
-      </div>
-    )
-  }
-
-  if (!stats) return null
-
+  const avgTime = stats.totalVisits > 0 ? Math.round(stats.totalTimeSpent / stats.totalVisits) : 0
   const maxDaily = Math.max(...Object.values(stats.dailyVisits), 1)
   const sortedDays = Object.entries(stats.dailyVisits).sort(([a], [b]) => a.localeCompare(b))
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white p-4 md:p-8">
       <div className="max-w-6xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold" style={{ fontFamily: 'Playfair Display' }}>
-            <span className="bg-gradient-to-r from-[#d4af37] to-[#f4e276] bg-clip-text text-transparent">
-              Dashboard Admin
-            </span>
-          </h1>
-          <p className="text-gray-400 mt-2">Statistiques du site d&apos;anniversaire de Papa</p>
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-bold" style={{ fontFamily: 'Playfair Display' }}>
+              <span className="bg-gradient-to-r from-[#d4af37] to-[#f4e276] bg-clip-text text-transparent">
+                Dashboard Admin
+              </span>
+            </h1>
+            <p className="text-gray-400 mt-2">Statistiques du site d&apos;anniversaire de Papa</p>
+          </div>
+          <button
+            onClick={onBack}
+            className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-gray-400 hover:text-white hover:border-[#d4af37]/30 transition-all text-sm"
+          >
+            ← Retour
+          </button>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
@@ -107,25 +77,29 @@ export default function AdminDashboard({ password }: { password: string }) {
           <StatCard label="Visiteurs" value={stats.uniqueVisitors} icon="👤" />
           <StatCard label="Vues" value={stats.totalViews} icon="📄" />
           <StatCard label="Temps total" value={formatDuration(stats.totalTimeSpent)} icon="⏱️" isText />
-          <StatCard label="Temps moyen" value={formatDuration(stats.avgTimePerVisit)} icon="📊" isText />
+          <StatCard label="Temps moyen" value={formatDuration(avgTime)} icon="📊" isText />
           <StatCard label="Partages" value={stats.shares} icon="🔗" />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-            <h2 className="text-xl font-semibold text-[#d4af37] mb-4">Visites (7 derniers jours)</h2>
-            <div className="flex items-end gap-2 h-48">
-              {sortedDays.map(([day, count]) => (
-                <div key={day} className="flex-1 flex flex-col items-center gap-1">
-                  <span className="text-xs text-gray-400">{count}</span>
-                  <div
-                    className="w-full bg-gradient-to-t from-[#d4af37] to-[#f4e276] rounded-t-md transition-all"
-                    style={{ height: `${(count / maxDaily) * 100}%`, minHeight: count > 0 ? '4px' : '0' }}
-                  />
-                  <span className="text-[10px] text-gray-500">{day.slice(5)}</span>
-                </div>
-              ))}
-            </div>
+            <h2 className="text-xl font-semibold text-[#d4af37] mb-4">Visites par jour</h2>
+            {sortedDays.length > 0 ? (
+              <div className="flex items-end gap-2 h-48">
+                {sortedDays.map(([day, count]) => (
+                  <div key={day} className="flex-1 flex flex-col items-center gap-1">
+                    <span className="text-xs text-gray-400">{count}</span>
+                    <div
+                      className="w-full bg-gradient-to-t from-[#d4af37] to-[#f4e276] rounded-t-md transition-all"
+                      style={{ height: `${(count / maxDaily) * 100}%`, minHeight: count > 0 ? '4px' : '0' }}
+                    />
+                    <span className="text-[10px] text-gray-500">{day.slice(5)}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-500 text-sm text-center py-8">Aucune donnée pour le moment</p>
+            )}
           </div>
 
           <div className="bg-white/5 border border-white/10 rounded-xl p-6">
@@ -133,18 +107,22 @@ export default function AdminDashboard({ password }: { password: string }) {
             <div className="space-y-3">
               {Object.entries(stats.pageViews)
                 .sort(([, a], [, b]) => b - a)
-                .map(([page, count]) => (
-                  <div key={page} className="flex items-center gap-3">
-                    <span className="text-sm text-gray-300 w-32 truncate">{page || '/'}</span>
-                    <div className="flex-1 h-3 bg-white/10 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-[#d4af37] to-[#f4e276] rounded-full"
-                        style={{ width: `${(count / Math.max(...Object.values(stats.pageViews))) * 100}%` }}
-                      />
+                .slice(0, 10)
+                .map(([page, count]) => {
+                  const maxPage = Math.max(...Object.values(stats.pageViews))
+                  return (
+                    <div key={page} className="flex items-center gap-3">
+                      <span className="text-sm text-gray-300 w-32 truncate">{page || '/'}</span>
+                      <div className="flex-1 h-3 bg-white/10 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-[#d4af37] to-[#f4e276] rounded-full"
+                          style={{ width: `${(count / maxPage) * 100}%` }}
+                        />
+                      </div>
+                      <span className="text-sm text-gray-400 w-8 text-right">{count}</span>
                     </div>
-                    <span className="text-sm text-gray-400 w-8 text-right">{count}</span>
-                  </div>
-                ))}
+                  )
+                })}
               {Object.keys(stats.pageViews).length === 0 && (
                 <p className="text-gray-500 text-sm">Aucune donnée pour le moment</p>
               )}
@@ -153,7 +131,20 @@ export default function AdminDashboard({ password }: { password: string }) {
         </div>
 
         <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-          <h2 className="text-xl font-semibold text-[#d4af37] mb-4">Visites récentes</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-[#d4af37]">Visites récentes</h2>
+            <button
+              onClick={() => {
+                if (confirm('Supprimer toutes les analytics ?')) {
+                  localStorage.removeItem('birthdayAnalytics')
+                  setStats(getAnalytics())
+                }
+              }}
+              className="text-xs text-red-400/60 hover:text-red-400 transition-colors"
+            >
+              Réinitialiser
+            </button>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -165,7 +156,7 @@ export default function AdminDashboard({ password }: { password: string }) {
                 </tr>
               </thead>
               <tbody>
-                {stats.recentVisits.map((visit, i) => (
+                {stats.visits.slice(0, 20).map((visit, i) => (
                   <tr key={i} className="border-b border-white/5 hover:bg-white/5">
                     <td className="py-2 text-gray-300">{formatDate(visit.timestamp)}</td>
                     <td className="py-2 text-gray-300">{formatDuration(visit.duration)}</td>
@@ -173,7 +164,7 @@ export default function AdminDashboard({ password }: { password: string }) {
                     <td className="py-2 text-gray-500 font-mono text-xs">{visit.id.slice(0, 8)}...</td>
                   </tr>
                 ))}
-                {stats.recentVisits.length === 0 && (
+                {stats.visits.length === 0 && (
                   <tr>
                     <td colSpan={4} className="py-4 text-gray-500 text-center">Aucune visite enregistrée</td>
                   </tr>
@@ -184,7 +175,7 @@ export default function AdminDashboard({ password }: { password: string }) {
         </div>
 
         <div className="mt-6 text-center text-gray-600 text-xs">
-          Dernière mise à jour: {stats.lastVisit ? formatDate(stats.lastVisit) : 'Jamais'}
+          Dernière mise à jour : {stats.lastVisit ? formatDate(stats.lastVisit) : 'Jamais'} • Auto-refresh toutes les 5s
         </div>
       </div>
     </div>

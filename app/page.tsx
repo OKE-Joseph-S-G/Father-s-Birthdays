@@ -21,22 +21,30 @@ const FinalWish = dynamic(() => import('@/components/FinalWish'))
 const SectionDivider = dynamic(() => import('@/components/SectionDivider'))
 const MusicPlayer = dynamic(() => import('@/components/MusicPlayer'), { ssr: false })
 const Analytics = dynamic(() => import('@/components/Analytics'), { ssr: false })
+const AdminDashboard = dynamic(() => import('@/components/AdminDashboard'), { ssr: false })
 
 export default function Home() {
-  const [unlocked, setUnlocked] = useState(false)
+  const [mode, setMode] = useState<'none' | 'site' | 'admin'>('none')
 
-  const handleUnlock = useCallback(() => {
-    setUnlocked(true)
+  const handleUnlock = useCallback((unlockMode: 'site' | 'admin') => {
+    setMode(unlockMode)
   }, [])
 
   return (
     <main className="relative">
-      <Analytics />
       <SplashScreen />
       <SecretGate onUnlocked={handleUnlock} />
 
-      {unlocked && (
+      {mode === 'admin' && (
+        <AdminDashboard onBack={() => {
+          sessionStorage.removeItem('secretGateAdmin')
+          setMode('none')
+        }} />
+      )}
+
+      {mode === 'site' && (
         <>
+          <Analytics />
           <AnimatedGradient />
           <ScrollProgress />
           <MusicPlayer />
