@@ -4,7 +4,7 @@ import { motion, useInView, AnimatePresence } from 'framer-motion'
 import { useRef, useState, useCallback, useEffect } from 'react'
 import { type Theme } from '@/lib/themes'
 
-function Lightbox({ images, index, accent, onClose, onNav }: {
+export function Lightbox({ images, index, accent, onClose, onNav }: {
   images: string[]
   index: number
   accent: string
