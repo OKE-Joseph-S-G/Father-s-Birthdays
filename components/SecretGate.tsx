@@ -180,7 +180,7 @@ export default function SecretGate() {
                       Question secrète
                     </p>
                     <p className="font-display text-lg sm:text-xl text-white/90 font-semibold">
-                      En quelle année est né(e) l&apos;anniversaire ?
+                      Pour ouvrir ce recueil de souvenirs, en quelle année cette belle histoire de vie a-t-elle commencé ?
                     </p>
                   </div>
 
