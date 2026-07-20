@@ -10,6 +10,20 @@ interface BookLayoutProps {
   theme: Theme
 }
 
+// Happy Birthday Music Box Notes (frequencies and durations)
+const MUSIC_BOX_NOTES = [
+  523.25, 523.25, 587.33, 523.25, 698.46, 659.25, // Hap-py birth-day to you
+  523.25, 523.25, 587.33, 523.25, 783.99, 698.46, // Hap-py birth-day to you
+  523.25, 523.25, 1046.50, 880.00, 698.46, 659.25, 587.33, // Hap-py birth-day dear ...
+  932.33, 932.33, 880.00, 698.46, 783.99, 698.46  // Hap-py birth-day to you
+]
+const MUSIC_BOX_DURATIONS = [
+  1, 1, 2, 2, 2, 4,
+  1, 1, 2, 2, 2, 4,
+  1, 1, 2, 2, 2, 2, 4,
+  1, 1, 2, 2, 2, 4
+]
+
 // Web Audio API Page Flip sound synthesizer
 const playPageFlipSound = () => {
   try {
@@ -17,9 +31,8 @@ const playPageFlipSound = () => {
     if (!AudioContext) return;
     const ctx = new AudioContext();
     
-    // Create white noise buffer to simulate paper friction
     const sampleRate = ctx.sampleRate;
-    const duration = 0.35; // 350ms
+    const duration = 0.35; 
     const bufferSize = sampleRate * duration;
     const buffer = ctx.createBuffer(1, bufferSize, sampleRate);
     const data = buffer.getChannelData(0);
@@ -31,16 +44,13 @@ const playPageFlipSound = () => {
     const noiseSource = ctx.createBufferSource();
     noiseSource.buffer = buffer;
     
-    // Bandpass filter to sculpt the noise into a "rustle"
     const filter = ctx.createBiquadFilter();
     filter.type = 'bandpass';
     filter.Q.value = 2.0;
     
-    // Sweep the frequency downwards to mimic the page sliding through the air
     filter.frequency.setValueAtTime(700, ctx.currentTime);
     filter.frequency.exponentialRampToValueAtTime(180, ctx.currentTime + duration);
     
-    // Gain envelope (fade out)
     const gainNode = ctx.createGain();
     gainNode.gain.setValueAtTime(0.06, ctx.currentTime);
     gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
@@ -55,22 +65,257 @@ const playPageFlipSound = () => {
   }
 }
 
+// Synth for Wax Seal Breaking snap/cracks
+const playWaxSealCrack = () => {
+  try {
+    const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    
+    for (let d = 0; d < 3; d++) {
+      const time = ctx.currentTime + d * 0.06;
+      const bufferSize = ctx.sampleRate * 0.04; // 40ms audio snap
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+      
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+      
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(1600, time);
+      filter.Q.value = 1.0;
+      
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.18, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.03);
+      
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+      noise.start(time);
+    }
+  } catch (e) {}
+}
+
+// Synth for Winding Crank click
+const playWindingClick = () => {
+  try {
+    const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(140, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(30, ctx.currentTime + 0.04);
+    
+    gain.gain.setValueAtTime(0.07, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.04);
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.05);
+  } catch (e) {}
+}
+
+// Synth for Music Box high pitch comb chime tines
+const playMusicBoxChime = (freq: number, detuneValue: number = 0) => {
+  try {
+    const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    
+    // Primary sound tines
+    const osc1 = ctx.createOscillator();
+    const osc2 = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    
+    osc1.type = 'sine';
+    osc1.frequency.value = freq;
+    osc1.detune.value = detuneValue;
+    
+    osc2.type = 'triangle';
+    osc2.frequency.value = freq;
+    osc2.detune.value = detuneValue + 6; // subtle chorusing
+    
+    // High-pitch tine overtone harmonics
+    const oscHarmonic = ctx.createOscillator();
+    oscHarmonic.type = 'sine';
+    oscHarmonic.frequency.value = freq * 3;
+    oscHarmonic.detune.value = detuneValue;
+    const harmonicGain = ctx.createGain();
+    harmonicGain.gain.setValueAtTime(0.04, ctx.currentTime);
+    harmonicGain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.25);
+    
+    // Ringing volume envelope
+    gainNode.gain.setValueAtTime(0.12, ctx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 1.6);
+    
+    osc1.connect(gainNode);
+    osc2.connect(gainNode);
+    oscHarmonic.connect(harmonicGain);
+    
+    gainNode.connect(ctx.destination);
+    harmonicGain.connect(ctx.destination);
+    
+    osc1.start();
+    osc2.start();
+    oscHarmonic.start();
+    
+    osc1.stop(ctx.currentTime + 1.8);
+    osc2.stop(ctx.currentTime + 1.8);
+    oscHarmonic.stop(ctx.currentTime + 0.25);
+  } catch (e) {}
+}
+
 export default function BookLayout({ theme }: BookLayoutProps) {
   const [currentSheet, setCurrentSheet] = useState(0)
   const [isMobile, setIsMobile] = useState(false)
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
   const [letterOpen, setLetterOpen] = useState(false)
+  const [sealState, setSealState] = useState<'intact' | 'cracking' | 'broken'>('intact')
   const [windowWidth, setWindowWidth] = useState(0)
   const [lockUnlocked, setLockUnlocked] = useState(false)
   const [mobilePage, setMobilePage] = useState(0)
   const [mounted, setMounted] = useState(false)
-
   
+  // Music Box states
+  const [musicBoxTension, setMusicBoxTension] = useState(0)
+  const [musicBoxPlaying, setMusicBoxPlaying] = useState(false)
+
+  // Guestbook states
+  const [inkColor, setInkColor] = useState('#2c241c')
+  const [isSigned, setIsSigned] = useState(false)
+  const [showConfetti, setShowConfetti] = useState(false)
+
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const isDrawing = useRef(false)
+  const lastX = useRef(0)
+  const lastY = useRef(0)
+
+  // Refs for scheduler
+  const tensionRef = useRef(0)
+  const noteIndexRef = useRef(0)
+  const timerRef = useRef<NodeJS.Timeout | null>(null)
+
   // Calculate live age stats
   const [ageStats, setAgeStats] = useState({
     years: 0, months: 0, days: 0, hours: 0, minutes: 0, seconds: 0,
     totalDays: 0, totalWeeks: 0, heartbeats: 0
   })
+
+  // Sync tension ref
+  useEffect(() => {
+    tensionRef.current = musicBoxTension
+  }, [musicBoxTension])
+
+  // Music Box scheduler play loop
+  useEffect(() => {
+    if (!musicBoxPlaying) return
+
+    let active = true
+    const playNextNote = () => {
+      if (!active) return
+
+      const curTension = tensionRef.current
+      if (curTension <= 0) {
+        setMusicBoxPlaying(false)
+        return
+      }
+
+      // Play note
+      const idx = noteIndexRef.current
+      const baseFreq = MUSIC_BOX_NOTES[idx % MUSIC_BOX_NOTES.length]
+
+      // Slow down and detune when tension is low (spring releasing!)
+      let tempoFactor = 1.0
+      let detuneVal = 0
+      if (curTension < 30) {
+        const ratio = curTension / 30 
+        tempoFactor = 1.0 + (1 - ratio) * 1.5 // up to 2.5x slower
+        detuneVal = -(1 - ratio) * 200 // up to -200 cents detuning (flat chime)
+      }
+
+      playMusicBoxChime(baseFreq, detuneVal)
+
+      // Advance note index
+      noteIndexRef.current = (idx + 1) % MUSIC_BOX_NOTES.length
+
+      // Deduct tension
+      setMusicBoxTension(prev => Math.max(0, prev - 3.5))
+
+      // Schedule next note based on note duration
+      const baseDurationMs = MUSIC_BOX_DURATIONS[idx % MUSIC_BOX_DURATIONS.length] * 240
+      const nextDelay = baseDurationMs * tempoFactor
+
+      timerRef.current = setTimeout(playNextNote, nextDelay)
+    }
+
+    timerRef.current = setTimeout(playNextNote, 240)
+
+    return () => {
+      active = false
+      if (timerRef.current) clearTimeout(timerRef.current)
+    }
+  }, [musicBoxPlaying])
+
+  // MouseMove & Gyroscope holographic Gold Foil Reflection listeners
+  useEffect(() => {
+    const handleMove = (x: number, y: number) => {
+      const pctX = (x / window.innerWidth) * 100
+      const pctY = (y / window.innerHeight) * 100
+      document.documentElement.style.setProperty('--gold-x', `${pctX}%`)
+      document.documentElement.style.setProperty('--gold-y', `${pctY}%`)
+    }
+
+    const onMouseMove = (e: MouseEvent) => {
+      handleMove(e.clientX, e.clientY)
+    }
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches.length > 0) {
+        handleMove(e.touches[0].clientX, e.touches[0].clientY)
+      }
+    }
+
+    window.addEventListener('mousemove', onMouseMove)
+    window.addEventListener('touchmove', onTouchMove, { passive: true })
+
+    const onOrientation = (e: DeviceOrientationEvent) => {
+      if (e.beta !== null && e.gamma !== null) {
+        // Map tilt angles to 0..100% position
+        const x = ((e.gamma + 30) / 60) * 100
+        const y = ((e.beta - 10) / 60) * 100
+        document.documentElement.style.setProperty('--gold-x', `${Math.max(0, Math.min(100, x))}%`)
+        document.documentElement.style.setProperty('--gold-y', `${Math.max(0, Math.min(100, y))}%`)
+      }
+    }
+    window.addEventListener('deviceorientation', onOrientation)
+
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove)
+      window.removeEventListener('touchmove', onTouchMove)
+      window.removeEventListener('deviceorientation', onOrientation)
+    }
+  }, [])
+
+  // Canvas drawing properties configuration
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    ctx.lineCap = 'round'
+    ctx.lineJoin = 'round'
+    ctx.lineWidth = 3
+  }, [inkColor, mounted])
 
   // Check mobile viewport and screen dimensions
   useEffect(() => {
@@ -135,7 +380,24 @@ export default function BookLayout({ theme }: BookLayoutProps) {
     return () => clearInterval(timer)
   }, [theme])
 
-  const totalSheets = 5 
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight') handleNext()
+      if (e.key === 'ArrowLeft') handlePrev()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [currentSheet, lockUnlocked])
+
+  // Set mounted state
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) return null
+
+  const totalSheets = 6 
 
   const handleNext = () => {
     if (currentSheet === 0 && !lockUnlocked) {
@@ -157,22 +419,6 @@ export default function BookLayout({ theme }: BookLayoutProps) {
     }
   }
 
-  // Keyboard navigation
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowRight') handleNext()
-      if (e.key === 'ArrowLeft') handlePrev()
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [currentSheet, lockUnlocked])
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  if (!mounted) return null
-
   const jumpToSheet = (sheetIndex: number) => {
     if (sheetIndex > 0) {
       setLockUnlocked(true)
@@ -180,6 +426,84 @@ export default function BookLayout({ theme }: BookLayoutProps) {
       setLockUnlocked(false)
     }
     setCurrentSheet(sheetIndex)
+  }
+
+  // Winding action
+  const windMusicBox = () => {
+    playWindingClick()
+    setMusicBoxTension(prev => {
+      const newTension = Math.min(100, prev + 18)
+      if (!musicBoxPlaying && newTension > 0) {
+        setMusicBoxPlaying(true)
+        window.dispatchEvent(new CustomEvent('musicBoxPlay', { detail: { playing: true } }))
+      }
+      return newTension
+    })
+  }
+
+  // Canvas drawing coordinate calculations
+  const getCoordinates = (e: MouseEvent | TouchEvent) => {
+    const canvas = canvasRef.current
+    if (!canvas) return { x: 0, y: 0 }
+    const rect = canvas.getBoundingClientRect()
+    
+    if ('touches' in e) {
+      if (e.touches.length === 0) return { x: 0, y: 0 }
+      return {
+        x: e.touches[0].clientX - rect.left,
+        y: e.touches[0].clientY - rect.top
+      }
+    } else {
+      return {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      }
+    }
+  }
+
+  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    isDrawing.current = true
+    const coords = getCoordinates(e.nativeEvent)
+    lastX.current = coords.x
+    lastY.current = coords.y
+  }
+
+  const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    if (!isDrawing.current) return
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    const coords = getCoordinates(e.nativeEvent)
+    
+    ctx.beginPath()
+    ctx.moveTo(lastX.current, lastY.current)
+    ctx.lineTo(coords.x, coords.y)
+    ctx.strokeStyle = inkColor
+    ctx.stroke()
+    
+    lastX.current = coords.x
+    lastY.current = coords.y
+  }
+
+  const stopDrawing = () => {
+    isDrawing.current = false
+  }
+
+  const clearCanvas = () => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    setIsSigned(false)
+  }
+
+  const saveSignature = () => {
+    setIsSigned(true)
+    setShowConfetti(true)
+    setTimeout(() => setShowConfetti(false), 2000)
   }
 
   // Page contents rendering helpers
@@ -215,7 +539,7 @@ export default function BookLayout({ theme }: BookLayoutProps) {
         </h2>
       </motion.div>
 
-      <h1 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 tracking-wider leading-tight text-transparent bg-clip-text bg-gradient-to-r from-[#d4af37] via-[#f9e4a0] to-[#d4af37] drop-shadow-[0_2px_5px_rgba(0,0,0,0.5)]">
+      <h1 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 tracking-wider leading-tight gold-foil-text drop-shadow-[0_2px_5px_rgba(0,0,0,0.5)]">
         {theme.greeting}
       </h1>
       
@@ -307,7 +631,7 @@ export default function BookLayout({ theme }: BookLayoutProps) {
       <div className="absolute left-8 top-0 bottom-0 w-[1px] bg-red-400/30" />
 
       <div className="flex-1 flex flex-col min-h-0 pl-6 z-10 overflow-y-auto scrollbar-thin mt-4 pr-1">
-        <h3 className="font-display text-xl sm:text-2xl font-bold text-[#2c241c] mb-0.5">
+        <h3 className="font-display text-xl sm:text-2xl font-bold text-[#2c241c] mb-0.5 gold-foil-text">
           {theme.lifeStatsLabel}
         </h3>
         <p className="font-handwritten text-base text-[#8c7a6b] mb-4">
@@ -416,7 +740,7 @@ export default function BookLayout({ theme }: BookLayoutProps) {
       <div className="absolute left-8 top-0 bottom-0 w-[1px] bg-red-400/30" />
 
       <div className="flex-1 overflow-y-auto scrollbar-thin pl-6 pr-1 mt-4 z-10 min-h-0">
-        <h3 className="font-display text-xl sm:text-2xl font-bold text-[#2c241c] mb-4">
+        <h3 className="font-display text-xl sm:text-2xl font-bold text-[#2c241c] mb-4 gold-foil-text">
           {theme.timelineTitle}
         </h3>
 
@@ -449,12 +773,12 @@ export default function BookLayout({ theme }: BookLayoutProps) {
     const hasPhotos = theme.galleryImages.length > 0;
 
     return (
-      <div className="w-full h-full p-4 sm:p-8 flex flex-col justify-between bg-[#fcfaf2] text-[#2c241c] relative overflow-hidden">
+      <div className="w-full h-full p-4 sm:p-8 flex flex-col justify-between bg-[#fcfaf2] text-[#2c241c] relative overflow-hidden" style={{ perspective: '1000px' }}>
         <div className="absolute inset-0 bg-[radial-gradient(rgba(0,0,0,0.015)_1px,transparent_1px)] bg-[size:18px_18px] pointer-events-none" />
         <div className="absolute left-8 top-0 bottom-0 w-[1px] bg-red-400/30" />
 
         <div className="flex-1 flex flex-col min-h-0 pl-6 z-10 mt-4 pr-1">
-          <h3 className="font-display text-xl sm:text-2xl font-bold text-[#2c241c] mb-3">
+          <h3 className="font-display text-xl sm:text-2xl font-bold text-[#2c241c] mb-3 gold-foil-text">
             Souvenirs en Images
           </h3>
 
@@ -467,17 +791,26 @@ export default function BookLayout({ theme }: BookLayoutProps) {
             </div>
           ) : (
             <div className="flex-1 overflow-y-auto scrollbar-thin pr-1">
-              <div className="grid grid-cols-2 gap-x-4 gap-y-5 items-center justify-items-center mt-1 pb-4">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-5 items-center justify-items-center mt-1 pb-4" style={{ transformStyle: 'preserve-3d' }}>
                 {theme.galleryImages.slice(0, 4).map((src, idx) => {
                   const rotations = [-3, 4, -2, 3];
                   const rot = rotations[idx % rotations.length];
                   return (
-                    <div
+                    <motion.div
                       key={idx}
                       onClick={() => setLightboxIndex(idx)}
-                      className="relative bg-white p-2 pb-4 shadow-md border border-[#e2dcc5] cursor-pointer hover:rotate-0 hover:scale-105 hover:shadow-lg transition-all duration-300 max-w-[110px] sm:max-w-[125px]"
+                      whileHover={{ 
+                        scale: 1.12, 
+                        rotate: 0,
+                        rotateX: 6,
+                        rotateY: -6,
+                        z: 35,
+                        boxShadow: '0 20px 30px rgba(0,0,0,0.25)' 
+                      }}
+                      className="relative bg-white p-2 pb-4 shadow-md border border-[#e2dcc5] cursor-pointer transition-all duration-350 max-w-[110px] sm:max-w-[125px]"
                       style={{ 
                         transform: `rotate(${rot}deg)`,
+                        transformStyle: 'preserve-3d',
                       }}
                     >
                       <div 
@@ -493,7 +826,7 @@ export default function BookLayout({ theme }: BookLayoutProps) {
                       <div className="text-center font-handwritten text-[10px] text-[#8c7a6b] mt-1.5 italic">
                         Photo {idx + 1}
                       </div>
-                    </div>
+                    </motion.div>
                   );
                 })}
               </div>
@@ -519,7 +852,7 @@ export default function BookLayout({ theme }: BookLayoutProps) {
       <div className="absolute left-8 top-0 bottom-0 w-[1px] bg-red-400/30" />
 
       <div className="mt-4 pl-6 flex-1 flex flex-col justify-center items-center z-10 pr-1">
-        <h3 className="font-display text-xl sm:text-2xl font-bold text-[#2c241c] mb-6 text-center">
+        <h3 className="font-display text-xl sm:text-2xl font-bold text-[#2c241c] mb-6 text-center gold-foil-text">
           Une Lettre Secrète
         </h3>
 
@@ -528,25 +861,76 @@ export default function BookLayout({ theme }: BookLayoutProps) {
             {!letterOpen ? (
               <motion.div
                 whileHover={{ scale: 1.03, y: -4 }}
-                onClick={() => setLetterOpen(true)}
-                className="w-full h-full rounded-xl cursor-pointer shadow-md flex flex-col items-center justify-center border"
+                className="w-full h-full rounded-xl cursor-pointer shadow-md flex flex-col items-center justify-center border relative overflow-hidden"
                 style={{
                   background: 'linear-gradient(135deg, #30261c 0%, #1e1711 100%)',
                   borderColor: theme.accent,
                 }}
-                exit={{ opacity: 0, scale: 0.9 }}
                 transition={{ duration: 0.3 }}
               >
+                {/* Wax Seal breakable graphics */}
                 <div 
-                  className="w-12 h-12 rounded-full flex items-center justify-center shadow-lg"
-                  style={{
-                    background: `radial-gradient(circle at 30% 30%, ${theme.accent}, ${theme.accent}cc)`,
+                  className="absolute w-24 h-24 flex items-center justify-center z-20"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    if (sealState === 'intact') {
+                      setSealState('cracking')
+                      playWaxSealCrack()
+                      setTimeout(() => {
+                        setSealState('broken')
+                        setLetterOpen(true)
+                      }, 750)
+                    }
                   }}
                 >
-                  <span className="text-[#0a0a0a] text-sm font-bold animate-pulse">❤</span>
+                  <AnimatePresence>
+                    {sealState === 'intact' && (
+                      <motion.div 
+                        className="w-16 h-16 rounded-full bg-gradient-to-br from-[#b82525] to-[#7c1212] border-[3px] border-double border-[#5c0b0b] shadow-[inset_0_2px_4px_rgba(255,255,255,0.35),0_4px_10px_rgba(0,0,0,0.5)] flex items-center justify-center relative select-none hover:scale-105 transition-transform"
+                        style={{ borderRadius: '48% 52% 51% 49% / 50% 48% 52% 50%' }}
+                        exit={{ opacity: 0, scale: 0.8 }}
+                      >
+                        <span className="text-white text-xl font-bold filter drop-shadow">❤</span>
+                        <div className="absolute inset-2 rounded-full border border-[#5c0b0b]/40 border-dashed" />
+                      </motion.div>
+                    )}
+
+                    {sealState === 'cracking' && (
+                      <div className="absolute inset-0 flex select-none pointer-events-none">
+                        <motion.div 
+                          initial={{ x: 0, rotate: 0, opacity: 1 }}
+                          animate={{ x: -35, rotate: -25, opacity: 0 }}
+                          transition={{ duration: 0.6, ease: 'easeOut' }}
+                          className="w-1/2 h-full bg-gradient-to-br from-[#b82525] to-[#7c1212] border-[3px] border-r-0 border-double border-[#5c0b0b] shadow-[0_4px_10px_rgba(0,0,0,0.4)] flex items-center justify-end relative overflow-hidden"
+                          style={{
+                            borderRadius: '48% 0 0 49% / 50% 0 0 50%',
+                            transformOrigin: 'bottom left'
+                          }}
+                        >
+                          <span className="text-white text-xl font-bold translate-x-1/2 filter drop-shadow">❤</span>
+                        </motion.div>
+                        <motion.div 
+                          initial={{ x: 0, rotate: 0, opacity: 1 }}
+                          animate={{ x: 35, rotate: 25, opacity: 0 }}
+                          transition={{ duration: 0.6, ease: 'easeOut' }}
+                          className="w-1/2 h-full bg-gradient-to-br from-[#b82525] to-[#7c1212] border-[3px] border-l-0 border-double border-[#5c0b0b] shadow-[0_4px_10px_rgba(0,0,0,0.4)] flex items-center justify-start relative overflow-hidden"
+                          style={{
+                            borderRadius: '0 52% 51% 0 / 0 48% 52% 0',
+                            transformOrigin: 'bottom right'
+                          }}
+                        >
+                          <span className="text-white text-xl font-bold -translate-x-1/2 filter drop-shadow">❤</span>
+                        </motion.div>
+                      </div>
+                    )}
+                  </AnimatePresence>
                 </div>
-                <p className="font-handwritten text-lg text-white/80 mt-4">
-                  Ouvrir l&apos;enveloppe
+                
+                <p className="font-handwritten text-lg text-white/80 mt-16 z-10">
+                  Briser le sceau de cire
+                </p>
+                <p className="font-handwritten text-xs text-gold-500/60 mt-1 z-10 animate-pulse">
+                  ( Cliquer pour ouvrir )
                 </p>
               </motion.div>
             ) : (
@@ -571,7 +955,10 @@ export default function BookLayout({ theme }: BookLayoutProps) {
                 </div>
                 
                 <button
-                  onClick={() => setLetterOpen(false)}
+                  onClick={() => {
+                    setLetterOpen(false)
+                    setSealState('intact')
+                  }}
                   className="mt-4 text-center font-handwritten text-xs text-[#8c7a6b] font-bold underline hover:text-[#4a3f35] pb-2"
                 >
                   Refermer
@@ -590,7 +977,7 @@ export default function BookLayout({ theme }: BookLayoutProps) {
       <div className="absolute left-8 top-0 bottom-0 w-[1px] bg-red-400/30" />
 
       <div className="flex-1 flex flex-col min-h-0 pl-6 z-10 mt-4 pr-1">
-        <h3 className="font-display text-xl sm:text-2xl font-bold text-[#2c241c] mb-3">
+        <h3 className="font-display text-xl sm:text-2xl font-bold text-[#2c241c] mb-3 gold-foil-text">
           Vœux Chaleureux
         </h3>
 
@@ -637,8 +1024,87 @@ export default function BookLayout({ theme }: BookLayoutProps) {
           ))}
         </div>
         
-        <div className="mt-6 text-center font-handwritten text-2xl sm:text-3xl font-bold tracking-wide" style={{ color: theme.accent }}>
+        <div className="mt-6 text-center font-handwritten text-2xl sm:text-3xl font-bold tracking-wide gold-foil-text">
           {theme.finalSign}
+        </div>
+      </div>
+    </div>
+  )
+
+  const renderGuestbook = () => (
+    <div className="w-full h-full p-4 sm:p-8 flex flex-col justify-between bg-[#fcfaf2] text-[#2c241c] relative overflow-hidden">
+      <div className="absolute inset-0 bg-[radial-gradient(rgba(0,0,0,0.015)_1px,transparent_1px)] bg-[size:18px_18px] pointer-events-none" />
+      <div className="absolute left-8 top-0 bottom-0 w-[1px] bg-red-400/30" />
+
+      <div className="flex-1 flex flex-col min-h-0 pl-6 z-10 mt-4 pr-1 items-center">
+        <h3 className="font-display text-xl sm:text-2xl font-bold text-[#2c241c] mb-0.5 text-center gold-foil-text">
+          Livre d&apos;Or
+        </h3>
+        <p className="font-handwritten text-sm text-[#8c7a6b] mb-2 text-center">
+          Laisse une signature ou un petit mot doux...
+        </p>
+
+        {/* Canvas for signatures */}
+        <div className="relative border-2 border-dashed border-[#dcd6bf] rounded-xl bg-white/65 shadow-inner overflow-hidden cursor-crosshair">
+          <canvas
+            ref={canvasRef}
+            width={320}
+            height={220}
+            onMouseDown={startDrawing}
+            onMouseMove={draw}
+            onMouseUp={stopDrawing}
+            onMouseLeave={stopDrawing}
+            onTouchStart={startDrawing}
+            onTouchMove={draw}
+            onTouchEnd={stopDrawing}
+            className="block"
+          />
+          {isSigned && (
+            <div className="absolute inset-0 bg-[#faf6e8]/90 backdrop-blur-[1px] flex flex-col items-center justify-center p-4 text-center">
+              <span className="text-3xl mb-2 animate-bounce">✍️✨</span>
+              <p className="font-handwritten text-lg font-bold text-green-800">
+                Message enregistré !
+              </p>
+              <p className="font-handwritten text-sm text-gray-600 mt-1">
+                Merci d&apos;avoir écrit dans ce recueil.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Controls */}
+        <div className="w-full flex items-center justify-between mt-3 gap-2 max-w-[320px]">
+          <div className="flex gap-2">
+            {[
+              { color: '#2c241c', label: '🟫' }, 
+              { color: '#d4af37', label: '👑' }, 
+              { color: '#c92a2a', label: '❤️' }
+            ].map((cfg) => (
+              <button
+                key={cfg.color}
+                onClick={() => setInkColor(cfg.color)}
+                className={`w-7 h-7 rounded-full flex items-center justify-center border transition-all ${inkColor === cfg.color ? 'border-gold-500 scale-110 shadow-md' : 'border-gray-200 opacity-60 hover:opacity-100'}`}
+                style={{ background: cfg.color === '#d4af37' ? 'linear-gradient(135deg, #ffdf00, #b8860b)' : cfg.color }}
+              >
+                <span className="text-xs filter drop-shadow">{cfg.label}</span>
+              </button>
+            ))}
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              onClick={clearCanvas}
+              className="px-3 py-1.5 rounded-lg border border-[#dcd6bf] bg-white hover:bg-gray-50 text-xs font-semibold text-gray-600 transition-colors shadow-sm animate-pulse"
+            >
+              Effacer
+            </button>
+            <button
+              onClick={saveSignature}
+              className="px-4 py-1.5 rounded-lg text-xs font-bold text-dark-900 bg-gradient-to-r from-[#d4af37] to-[#f9e4a0] hover:shadow-md transition-all shadow-sm border border-[#ffdf00]/30"
+            >
+              Signer
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -650,7 +1116,7 @@ export default function BookLayout({ theme }: BookLayoutProps) {
       <div className="absolute left-8 top-0 bottom-0 w-[1px] bg-red-400/30" />
 
       <div className="pl-6 mt-10 text-center z-10">
-        <h3 className="font-display text-xl sm:text-2xl font-bold mb-3">
+        <h3 className="font-display text-xl sm:text-2xl font-bold mb-3 gold-foil-text">
           Fin du Cahier
         </h3>
         <p className="font-handwritten text-lg text-[#8c7a6b] max-w-xs mx-auto leading-relaxed">
@@ -739,8 +1205,10 @@ export default function BookLayout({ theme }: BookLayoutProps) {
               renderLetter()
             ) : currentSheet === 4 ? (
               renderFinalWish()
-            ) : (
+            ) : currentSheet === 5 ? (
               renderClosing()
+            ) : (
+              <div className="w-full h-full bg-transparent" />
             )}
           </motion.div>
 
@@ -761,6 +1229,8 @@ export default function BookLayout({ theme }: BookLayoutProps) {
             ) : currentSheet === 3 ? (
               renderMessages()
             ) : currentSheet === 4 ? (
+              renderGuestbook()
+            ) : currentSheet === 5 ? (
               renderClosing()
             ) : (
               renderBackCover()
@@ -796,7 +1266,7 @@ export default function BookLayout({ theme }: BookLayoutProps) {
               >
                 {/* FRONT FACE (Visible when page is on the right) */}
                 <div 
-                  className="absolute inset-0 w-full h-full bg-[#fcfaf2] rounded-r-xl overflow-hidden shadow-[inset_10px_0_25px_rgba(0,0,0,0.12)]"
+                  className="absolute inset-0 w-full h-full bg-[#fcfaf2] rounded-r-xl overflow-hidden shadow-[inset_10px_0_25px_rgba(0,0,0,0.12)] relative"
                   style={{
                     backfaceVisibility: 'hidden',
                     WebkitBackfaceVisibility: 'hidden',
@@ -806,12 +1276,25 @@ export default function BookLayout({ theme }: BookLayoutProps) {
                   {idx === 1 && renderStats()}
                   {idx === 2 && renderGallery()}
                   {idx === 3 && renderMessages()}
-                  {idx === 4 && renderClosing()}
+                  {idx === 4 && renderGuestbook()}
+                  {idx === 5 && renderClosing()}
+
+                  {/* Active Page Spine shadow fold overlay (Fades in during the turn) */}
+                  <motion.div 
+                    className="absolute top-0 bottom-0 left-0 w-8 pointer-events-none z-20"
+                    style={{
+                      background: 'linear-gradient(to right, rgba(0,0,0,0.22) 0%, transparent 100%)'
+                    }}
+                    animate={{
+                      opacity: isFlipped ? [0, 0.45, 0] : [0, 0.45, 0]
+                    }}
+                    transition={{ duration: 0.9, ease: 'easeInOut' }}
+                  />
                 </div>
 
                 {/* BACK FACE (Visible when page is flipped to the left) */}
                 <div 
-                  className="absolute inset-0 w-full h-full bg-[#fcfaf2] rounded-l-xl overflow-hidden shadow-[inset_-10px_0_25px_rgba(0,0,0,0.12)] border-r border-black/10"
+                  className="absolute inset-0 w-full h-full bg-[#fcfaf2] rounded-l-xl overflow-hidden shadow-[inset_-10px_0_25px_rgba(0,0,0,0.12)] border-r border-black/10 relative"
                   style={{
                     backfaceVisibility: 'hidden',
                     WebkitBackfaceVisibility: 'hidden',
@@ -822,7 +1305,20 @@ export default function BookLayout({ theme }: BookLayoutProps) {
                   {idx === 1 && renderTimeline()}
                   {idx === 2 && renderLetter()}
                   {idx === 3 && renderFinalWish()}
-                  {idx === 4 && renderBackCover()}
+                  {idx === 4 && renderClosing()}
+                  {idx === 5 && renderBackCover()}
+
+                  {/* Active Page Spine shadow fold overlay (Fades in during the turn) */}
+                  <motion.div 
+                    className="absolute top-0 bottom-0 right-0 w-8 pointer-events-none z-20"
+                    style={{
+                      background: 'linear-gradient(to left, rgba(0,0,0,0.22) 0%, transparent 100%)'
+                    }}
+                    animate={{
+                      opacity: isFlipped ? [0, 0.45, 0] : [0, 0.45, 0]
+                    }}
+                    transition={{ duration: 0.9, ease: 'easeInOut' }}
+                  />
                 </div>
               </motion.div>
             )
@@ -877,8 +1373,8 @@ export default function BookLayout({ theme }: BookLayoutProps) {
 
   // Single-page Layout (Mobile/Tablet)
   const renderSinglePageLayout = () => {
-    const mobilePagesCount = 10
-
+    const mobilePagesCount = 11
+    
     const nextMobilePage = () => {
       if (mobilePage === 0 && !lockUnlocked) {
         setLockUnlocked(true)
@@ -931,19 +1427,35 @@ export default function BookLayout({ theme }: BookLayoutProps) {
               {mobilePage === 5 && renderLetter()}
               {mobilePage === 6 && renderMessages()}
               {mobilePage === 7 && renderFinalWish()}
-              {mobilePage === 8 && renderClosing()}
-              {mobilePage === 9 && renderBackCover()}
+              {mobilePage === 8 && renderGuestbook()}
+              {mobilePage === 9 && renderClosing()}
+              {mobilePage === 10 && renderBackCover()}
             </motion.div>
           </AnimatePresence>
 
           {/* Page index indicator */}
           <div className="absolute bottom-2 left-6 text-[10px] font-body text-[#8c7a6b] font-semibold">
-            Page {mobilePage + 1} / 10
+            Page {mobilePage + 1} / 11
           </div>
         </div>
 
+        {/* Mobile winding Music Box key bar */}
+        <div className="flex items-center gap-3 bg-[#2b1f17] border border-[#ffdf00]/30 rounded-full py-1.5 px-4 shadow-lg mb-4 mt-4 max-w-full">
+          <span className="font-body text-[8px] font-bold text-[#f9e4a0] uppercase tracking-wider">Mélodie :</span>
+          <button 
+            onClick={windMusicBox} 
+            className="w-7 h-7 rounded-full bg-[#3e2b20] border border-[#ffdf00]/40 flex items-center justify-center active:scale-95 transition-transform"
+          >
+            <span className="text-[10px] filter drop-shadow">🔑</span>
+          </button>
+          <div className="w-20 bg-[#1b120c] h-2.5 rounded-full overflow-hidden relative shadow-inner">
+            <div className="h-full bg-gradient-to-r from-[#d4af37] to-[#ffdf00] transition-all duration-300" style={{ width: `${musicBoxTension}%` }} />
+          </div>
+          <span className="font-handwritten text-xs text-[#f9e4a0]">{Math.round(musicBoxTension)}%</span>
+        </div>
+
         {/* Navigation Controls */}
-        <div className="flex justify-between items-center w-full mt-6 bg-dark-700/60 backdrop-blur border border-white/5 p-3 rounded-full shadow-lg">
+        <div className="flex justify-between items-center w-full bg-dark-700/60 backdrop-blur border border-white/5 p-3 rounded-full shadow-lg">
           <button
             onClick={prevMobilePage}
             disabled={mobilePage === 0}
@@ -961,8 +1473,9 @@ export default function BookLayout({ theme }: BookLayoutProps) {
             {mobilePage === 5 && "Lettre"}
             {mobilePage === 6 && "Vœux"}
             {mobilePage === 7 && "Vœu Final"}
-            {mobilePage === 8 && "Fin"}
-            {mobilePage === 9 && "Dos"}
+            {mobilePage === 8 && "Livre d'Or"}
+            {mobilePage === 9 && "Fin"}
+            {mobilePage === 10 && "Dos"}
           </div>
 
           <button
@@ -982,6 +1495,7 @@ export default function BookLayout({ theme }: BookLayoutProps) {
           <button onClick={() => jumpToMobilePage(4)} className={`px-2.5 py-1 rounded-md text-[10px] font-body transition-colors ${mobilePage === 4 ? 'bg-[#d4af37] text-dark-900 font-bold' : 'bg-dark-800 text-white/50 hover:bg-dark-700'}`}>Photos</button>
           <button onClick={() => jumpToMobilePage(5)} className={`px-2.5 py-1 rounded-md text-[10px] font-body transition-colors ${mobilePage === 5 ? 'bg-[#d4af37] text-dark-900 font-bold' : 'bg-dark-800 text-white/50 hover:bg-dark-700'}`}>Lettre</button>
           <button onClick={() => jumpToMobilePage(6)} className={`px-2.5 py-1 rounded-md text-[10px] font-body transition-colors ${mobilePage === 6 ? 'bg-[#d4af37] text-dark-900 font-bold' : 'bg-dark-800 text-white/50 hover:bg-dark-700'}`}>Vœux</button>
+          <button onClick={() => jumpToMobilePage(8)} className={`px-2.5 py-1 rounded-md text-[10px] font-body transition-colors ${mobilePage === 8 ? 'bg-[#d4af37] text-dark-900 font-bold' : 'bg-dark-800 text-white/50 hover:bg-dark-700'}`}>Signer</button>
         </div>
       </div>
     )
@@ -996,7 +1510,7 @@ export default function BookLayout({ theme }: BookLayoutProps) {
       { label: 'Stats', sheet: 1 },
       { label: 'Parcours', sheet: 2 },
       { label: 'Lettre', sheet: 3 },
-      { label: 'Vœux', sheet: 4 },
+      { label: 'Signer', sheet: 4 },
     ]
 
     return (
@@ -1026,7 +1540,7 @@ export default function BookLayout({ theme }: BookLayoutProps) {
   return (
     <div className="w-full min-h-screen flex flex-col items-center justify-center py-10 px-4 select-none relative z-10 font-body">
       
-      {/* Self-contained CSS Animations for Sway & Plaque Shimmer */}
+      {/* Self-contained CSS Animations for Sway & Plaque Shimmer & Gold Foil Fallback */}
       <style>{`
         @keyframes sway {
           0%, 100% { transform: translate(10px) rotate(0deg); }
@@ -1036,10 +1550,29 @@ export default function BookLayout({ theme }: BookLayoutProps) {
           0% { background-position: -200px 0; }
           100% { background-position: 200px 0; }
         }
+        @keyframes gold-shimmer-fallback {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
         .animate-shimmer-gold {
           background: linear-gradient(135deg, #b8860b 0%, #e5c060 25%, #ffdf00 50%, #e5c060 75%, #b8860b 100%);
           background-size: 400px 100%;
           animation: shimmer-gold 6s infinite linear;
+        }
+        .gold-foil-text {
+          background: radial-gradient(
+            circle at var(--gold-x, 50%) var(--gold-y, 50%),
+            #fff3bd 0%,
+            #d4af37 45%,
+            #b8860b 80%,
+            #5e4200 100-percent
+          );
+          background-size: 200% 200%;
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          filter: drop-shadow(0 1px 1.5px rgba(0,0,0,0.3));
+          animation: gold-shimmer-fallback 15s infinite ease-in-out;
         }
         .scrollbar-thin::-webkit-scrollbar {
           width: 4px;
@@ -1052,6 +1585,52 @@ export default function BookLayout({ theme }: BookLayoutProps) {
           border-radius: 2px;
         }
       `}</style>
+
+      {/* Floating Vintage Music Box Widget (Desktop Only) */}
+      {!isMobile && (
+        <div className="absolute left-[-110px] top-1/2 -translate-y-1/2 flex flex-col items-center gap-3 bg-[#2a1d15] border-2 border-[#ffdf00]/30 rounded-2xl p-3 shadow-2xl text-center w-[92px] border-l-4 border-l-[#d4af37] z-50">
+          <span className="font-body text-[8px] tracking-[0.1em] font-bold text-[#f9e4a0] uppercase">Mélodie</span>
+          
+          <motion.button
+            onClick={windMusicBox}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ rotate: 180, scale: 0.95 }}
+            className="w-12 h-12 bg-[#3e2b20] border border-[#ffdf00]/40 rounded-full flex items-center justify-center cursor-pointer shadow-md hover:shadow-lg relative group"
+          >
+            <motion.div
+              animate={{
+                rotate: musicBoxPlaying ? 360 : 0
+              }}
+              transition={{
+                duration: musicBoxPlaying ? 6 * (100 / (musicBoxTension + 1)) : 0.6,
+                repeat: musicBoxPlaying ? Infinity : 0,
+                ease: musicBoxPlaying ? 'linear' : 'easeOut'
+              }}
+              className="w-8 h-8 flex items-center justify-center"
+            >
+              <svg viewBox="0 0 24 24" className="w-6 h-6 text-[#ffdf00] filter drop-shadow">
+                <path fill="currentColor" d="M7 10h3v4H7v-4zm5-6c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3zm0 4c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm0 4c-1.66 0-3 1.34-3 3v5h6v-5c0-1.66-1.34-3-3-3z" />
+              </svg>
+            </motion.div>
+          </motion.button>
+
+          <span className="font-handwritten text-xs text-[#f9e4a0] italic animate-pulse">Remonter!</span>
+
+          {/* Tension bar */}
+          <div className="w-full bg-[#1b120c] h-3.5 rounded-full border border-black/60 overflow-hidden relative shadow-inner">
+            <motion.div
+              className="h-full bg-gradient-to-r from-[#d4af37] to-[#ffdf00]"
+              animate={{
+                width: `${musicBoxTension}%`
+              }}
+              transition={{ duration: 0.3 }}
+            />
+            <div className="absolute inset-0 flex items-center justify-center text-[7px] text-white/50 font-bold uppercase">
+              {Math.round(musicBoxTension)}%
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Book Container with responsive layout */}
       <div className="relative w-full max-w-[1000px] flex justify-center items-center">

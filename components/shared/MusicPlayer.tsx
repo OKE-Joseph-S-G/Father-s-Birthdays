@@ -68,6 +68,20 @@ export default function MusicPlayer({ name = 'Papa' }: MusicPlayerProps) {
     }
   }, [])
 
+  // Listen to musicBoxPlay events to pause YouTube background music
+  useEffect(() => {
+    const handleMusicBoxPlay = (e: Event) => {
+      const customEvent = e as CustomEvent
+      if (customEvent.detail && customEvent.detail.playing) {
+        if (playerRef.current && playerReady && isPlaying) {
+          playerRef.current.pauseVideo()
+        }
+      }
+    }
+    window.addEventListener('musicBoxPlay', handleMusicBoxPlay)
+    return () => window.removeEventListener('musicBoxPlay', handleMusicBoxPlay)
+  }, [playerReady, isPlaying])
+
   const handlePlay = useCallback(() => {
     if (playerRef.current && playerReady) {
       playerRef.current.playVideo()
